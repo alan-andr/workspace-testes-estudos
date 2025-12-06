@@ -21,3 +21,4 @@ User Function ARRAY003()
     Else 
         Alert("Pedido bloqueado.")
     EndIf
+Return
