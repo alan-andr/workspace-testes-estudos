@@ -55,8 +55,23 @@
 		},
 		{
 			"label": "U_ARRAY006"
+		},
+		{
+			"label": "U_COND002"
+		},
+		{
+			"label": "U_DESAF01"
+		},
+		{
+			"label": "U_COND003"
+		},
+		{
+			"label": "U_COND004"
+		},
+		{
+			"label": "U_DESAF002"
 		}
 	],
-	"lastProgramExecuted": "U_ARRAY006",
+	"lastProgramExecuted": "U_DESAF002",
 	"lastProgramArguments": []
 }
