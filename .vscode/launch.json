@@ -34,8 +34,23 @@
 		},
 		{
 			"label": "U_ARRAY004"
+		},
+		{
+			"args": [],
+			"label": "U_EX004"
+		},
+		{
+			"label": "U_EX005"
+		},
+		{
+			"args": [],
+			"label": "U_EX005"
+		},
+		{
+			"args": [],
+			"label": "U_ARRAY005"
 		}
 	],
-	"lastProgramExecuted": "U_ARRAY004",
+	"lastProgramExecuted": "U_ARRAY005",
 	"lastProgramArguments": []
 }
