@@ -70,8 +70,33 @@
 		},
 		{
 			"label": "U_DESAF002"
+		},
+		{
+			"args": [],
+			"label": "U_MOD001"
+		},
+		{
+			"label": "U_MOD002"
+		},
+		{
+			"label": "U_ARRAY007"
+		},
+		{
+			"label": "U_ARRAY008"
+		},
+		{
+			"label": "U_ARRAY009"
+		},
+		{
+			"label": "U_ARRAY010"
+		},
+		{
+			"label": "U_ARRAY01'"
+		},
+		{
+			"label": "U_ARRAY011"
 		}
 	],
-	"lastProgramExecuted": "U_DESAF002",
+	"lastProgramExecuted": "U_ARRAY011",
 	"lastProgramArguments": []
 }
