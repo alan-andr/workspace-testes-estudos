@@ -9,7 +9,7 @@ User Function WORK010()
     DbSelectArea( cAliasSBM )
     DbSetOrder(1)
 
-    If ! ( cAliasSBM )->( DbSeek( xFilial(cAliasSBM) + "99" ) )
+    If .NOT. ( cAliasSBM )->( DbSeek( xFilial( cAliasSBM ) + "99" ) )
 
         RecLock( cAliasSBM, .T. )
             ( cAliasSBM )->BM_FILIAL := xFilial( cAliasSBM ) 
