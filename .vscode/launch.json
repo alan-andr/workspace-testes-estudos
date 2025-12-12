@@ -95,8 +95,61 @@
 		},
 		{
 			"label": "U_ARRAY011"
+		},
+		{
+			"label": "U_WORK001"
+		},
+		{
+			"label": "U_WORK002"
+		},
+		{
+			"label": "U_WORK003"
+		},
+		{
+			"label": "U_WORK004"
+		},
+		{
+			"label": "U_WORK005"
+		},
+		{
+			"label": "U_WORK006"
+		},
+		{
+			"label": "U_WORK007"
+		},
+		{
+			"label": "U_WORK008"
+		},
+		{
+			"args": [],
+			"label": "U_WORK008"
+		},
+		{
+			"label": "U_SETUPDADOS"
+		},
+		{
+			"label": "U_WORK009"
+		},
+		{
+			"label": "U_WORK010"
+		},
+		{
+			"label": "U_WORK011"
+		},
+		{
+			"label": "U_WORK012"
+		},
+		{
+			"label": "U_WORK013"
+		},
+		{
+			"label": "U_WORK014"
+		},
+		{
+			"args": [],
+			"label": "U_SetupKit"
 		}
 	],
-	"lastProgramExecuted": "U_ARRAY011",
+	"lastProgramExecuted": "U_SetupKit",
 	"lastProgramArguments": []
 }
