@@ -14,7 +14,7 @@ User Function SetupKit()
         fCriaSaldo("TECLADO", 10) // Chama função passando Código do produto e quantidade de saldo
         fCriaSaldo("KITGAMER", 0)
 
-        Alert("SUCESSO: Tabela SB2 criada e Saldos gerados!")
+        FWAlert("SUCESSO: Tabela SB2 criada e Saldos gerados!")
     Else
         Alert("ERRO: Problema no dicionário SX3.")
     EndIf
@@ -36,7 +36,7 @@ Static Function fCriaSaldo(cCod, nQtd)
             SB2->B2_LOCAL := "01"
             SB2->B2_QATU := nQtd
         SB2->( MsUnlock() )
-    Else // Se encontrar só adiciona a quantidade ao saldo 
+    Else // Se encontrar troca a quantidade ao saldo existe
         RecLock("SB2", .F.)
             SB2->B2_QATU := nQtd
         SB2->( MsUnlock() )

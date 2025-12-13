@@ -148,8 +148,14 @@
 		{
 			"args": [],
 			"label": "U_SetupKit"
+		},
+		{
+			"label": "U_WORK015"
+		},
+		{
+			"label": "U_WORK016"
 		}
 	],
-	"lastProgramExecuted": "U_SetupKit",
+	"lastProgramExecuted": "<cancel>",
 	"lastProgramArguments": []
 }
