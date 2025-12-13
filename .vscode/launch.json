@@ -154,8 +154,17 @@
 		},
 		{
 			"label": "U_WORK016"
+		},
+		{
+			"label": "U_WORK017"
+		},
+		{
+			"label": "U_ARRAY012"
+		},
+		{
+			"label": "U_WORK018"
 		}
 	],
-	"lastProgramExecuted": "<cancel>",
+	"lastProgramExecuted": "U_WORK018",
 	"lastProgramArguments": []
 }
