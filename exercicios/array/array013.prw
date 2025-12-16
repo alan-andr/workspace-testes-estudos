@@ -44,14 +44,14 @@ Static Function processaDados(aDados)
         ElseIf cTipoProd == '002'
 
             cDescProd := 'MER - ' + cDescProd
-
+ 
         Else
 
             cDescProd := 'UNK - ' + cDescProd
 
         EndIf
 
-        aDados[nX, 2] := cDescProd
+        aDados[nX, 2] := cDescProd // Vai salvando no array de acordo as expressões que forem verdadeiras
 
     Next nX
 
