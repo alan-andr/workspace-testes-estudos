@@ -176,8 +176,26 @@
 		},
 		{
 			"label": "U_ARRAY014"
+		},
+		{
+			"label": "U_ARRAY015"
+		},
+		{
+			"label": "U_ARRAY016"
+		},
+		{
+			"label": "U_ARRAY017"
+		},
+		{
+			"label": "U_ARRAY018"
+		},
+		{
+			"label": "U_SQL001"
+		},
+		{
+			"label": "U_MANI001"
 		}
 	],
-	"lastProgramExecuted": "U_ARRAY014",
+	"lastProgramExecuted": "U_MANI001",
 	"lastProgramArguments": []
 }
