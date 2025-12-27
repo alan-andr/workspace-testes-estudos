@@ -194,8 +194,20 @@
 		},
 		{
 			"label": "U_MANI001"
+		},
+		{
+			"label": "U_MANI002"
+		},
+		{
+			"label": "U_MANII002"
+		},
+		{
+			"label": "U_MANI003"
+		},
+		{
+			"label": "U_MANI004"
 		}
 	],
-	"lastProgramExecuted": "U_MANI001",
+	"lastProgramExecuted": "U_MANI004",
 	"lastProgramArguments": []
 }
