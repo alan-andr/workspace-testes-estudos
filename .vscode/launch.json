@@ -206,8 +206,26 @@
 		},
 		{
 			"label": "U_MANI004"
+		},
+		{
+			"label": "U_CSCEP"
+		},
+		{
+			"label": "U_CSCNPJ"
+		},
+		{
+			"label": "U_CSMOEDA"
+		},
+		{
+			"label": "U_CSPAIS"
+		},
+		{
+			"label": "U_CSBASIC"
+		},
+		{
+			"label": "U_WORK020"
 		}
 	],
-	"lastProgramExecuted": "U_MANI004",
+	"lastProgramExecuted": "U_WORK020",
 	"lastProgramArguments": []
 }
