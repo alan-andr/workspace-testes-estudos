@@ -224,8 +224,17 @@
 		},
 		{
 			"label": "U_WORK020"
+		},
+		{
+			"label": "U_CSBASIC02"
+		},
+		{
+			"label": "U_CSBASIC03"
+		},
+		{
+			"label": "U_CSBASICP"
 		}
 	],
-	"lastProgramExecuted": "U_WORK020",
+	"lastProgramExecuted": "U_CSBASICP",
 	"lastProgramArguments": []
 }
