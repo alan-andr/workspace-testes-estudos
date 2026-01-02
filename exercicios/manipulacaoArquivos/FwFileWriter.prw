@@ -2,7 +2,7 @@
 #Include 'totvs.ch'
 
 User Function MANI001()
-    Local cPath     := "C:\Projetos\local\workspace-testes-estudos\arquivos\"
+    Local cPath     := "C:\Projetos\local\workspace-testes-estudos\arquivos\e"
     Local cNome     := ""
     Local cTipo     := ""
     Local cArquivo  := ""
