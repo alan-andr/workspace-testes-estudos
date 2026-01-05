@@ -1,0 +1,12 @@
+Código: 00002 | Nome: AGUA MINERAL PREMIUM
+Código: CADEIRA | Nome: CADEIRA GAMER
+Código: 00006 | Nome: CEREAL
+Código: 00005 | Nome: KIT DE TESTE AUTOMATIZADO
+Código: 222222222222222 | Nome: NESCAL
+Código: 00004 | Nome: PNEU 235X60R17
+Código: TV001 | Nome: SMART TV 50
+Código: 00001 | Nome: Switch Gigabit 24 Ports Manageable
+Código: PROD-NET-001 | Nome: Switch Gigabit 24 Ports Manageable
+Código: 00010 | Nome: TECLADO MECANICO
+Código: 00003 | Nome: ÁGUA MINERAL COM GAS
+Total de itens exportados: 11

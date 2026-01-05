@@ -233,8 +233,32 @@
 		},
 		{
 			"label": "U_CSBASICP"
+		},
+		{
+			"label": "U_CSCEP02"
+		},
+		{
+			"label": "U_CSPAIS02"
+		},
+		{
+			"label": "U_MTDPOST"
+		},
+		{
+			"label": "U_MTDPOST02"
+		},
+		{
+			"label": "U_BEARER01"
+		},
+		{
+			"label": "U_BEARER02"
+		},
+		{
+			"label": "U_BEARER03"
+		},
+		{
+			"label": "U_DBSEL01"
 		}
 	],
-	"lastProgramExecuted": "U_CSBASICP",
+	"lastProgramExecuted": "U_DBSEL01",
 	"lastProgramArguments": []
 }
