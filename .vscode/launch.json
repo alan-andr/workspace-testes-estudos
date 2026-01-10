@@ -257,8 +257,26 @@
 		},
 		{
 			"label": "U_DBSEL01"
+		},
+		{
+			"label": "U_BEARER04"
+		},
+		{
+			"label": "U_SYSPAR"
+		},
+		{
+			"label": "U_zWSProdutos"
+		},
+		{
+			"label": "U_DBSEL02"
+		},
+		{
+			"label": "U_MOD003"
+		},
+		{
+			"label": "U_MOD004"
 		}
 	],
-	"lastProgramExecuted": "U_DBSEL01",
+	"lastProgramExecuted": "U_MOD004",
 	"lastProgramArguments": []
 }
