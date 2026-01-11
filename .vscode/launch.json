@@ -275,8 +275,20 @@
 		},
 		{
 			"label": "U_MOD004"
+		},
+		{
+			"label": "U_DBSEL03"
+		},
+		{
+			"label": "U_DBSEL04"
+		},
+		{
+			"label": "U_DBSEL05"
+		},
+		{
+			"label": "U_APIPRODS"
 		}
 	],
-	"lastProgramExecuted": "U_MOD004",
+	"lastProgramExecuted": "U_APIPRODS",
 	"lastProgramArguments": []
 }
