@@ -53,7 +53,7 @@ User Function APIPRODS()
                 nInserted++
                 lEncontrou := .T.
             Else
-                RecLock( 'SB1' , .F.)
+                RecLock( 'SB1' , .F. )
                     SB1->B1_DESC   := cDescProd
                 SB1->( MsUnlock() )
 
