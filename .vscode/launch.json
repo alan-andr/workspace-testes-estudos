@@ -287,8 +287,23 @@
 		},
 		{
 			"label": "U_APIPRODS"
+		},
+		{
+			"label": "U_POSTPROD"
+		},
+		{
+			"label": "U_JSONPOST"
+		},
+		{
+			"label": "U_JSONPUT"
+		},
+		{
+			"label": "U_JSONDEL"
+		},
+		{
+			"label": "U_DUMUSRS"
 		}
 	],
-	"lastProgramExecuted": "U_APIPRODS",
+	"lastProgramExecuted": "U_DUMUSRS",
 	"lastProgramArguments": []
 }
