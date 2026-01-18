@@ -302,8 +302,14 @@
 		},
 		{
 			"label": "U_DUMUSRS"
+		},
+		{
+			"label": "U_DUMPUT"
+		},
+		{
+			"label": "U_LIBRARY"
 		}
 	],
-	"lastProgramExecuted": "U_DUMUSRS",
+	"lastProgramExecuted": "<cancel>",
 	"lastProgramArguments": []
 }
