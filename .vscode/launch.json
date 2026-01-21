@@ -308,8 +308,11 @@
 		},
 		{
 			"label": "U_LIBRARY"
+		},
+		{
+			"label": "U_RELPDFIN"
 		}
 	],
-	"lastProgramExecuted": "<cancel>",
+	"lastProgramExecuted": "U_RELPDFIN",
 	"lastProgramArguments": []
 }
