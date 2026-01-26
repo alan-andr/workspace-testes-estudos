@@ -1,0 +1,15 @@
+#Include 'tlpp-core.th'
+#Include 'tlpp-rest.th'
+
+Namespace prepAmbiente
+
+User Function PrepEnv() 
+    Local cCodEmp := '99' As Character
+    Local cCodFil := '01' As Character
+    Local cLogUsr := 'admin' As Character 
+    Local cLogSen := '123' As Character
+
+    If Select('SX2') <= 0
+        RpcSetEnv(cCodEmp, cCodFil, cLogUsr, cLogSen)
+    EndIf
+Return

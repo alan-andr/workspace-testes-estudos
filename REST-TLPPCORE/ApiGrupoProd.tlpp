@@ -1,0 +1,50 @@
+// * Bibliotecas
+#Include 'tlpp-core.th'
+#Include 'tlpp-rest.th'
+
+// * Declaração da namespace
+Namespace usandoGetComum 
+
+@Get("WsGrupoProdNov/get/unico/")
+User Function WsGrupoProdNovGetUnico()
+    Local jResponse := jsonObject():New() As Json
+    Local jPath As Json
+    Local cAliasWs := 'SBM' As Character
+
+    // * Aciona a preparação do ambiente
+    prepAmbiente.u_prepEnv()
+
+    // * Busca os dados que o uusário informou
+    jPath := jsonObject():New()
+    jPath := oRest:GetQueryRequest()
+
+    // * Caso haja conteúdo e o ID não esteja vazio
+    If jPath != Nil .AND. ! Empty(jPath:GetJsonObject('id'))
+
+        DbSelectArea(cAliasWs)
+        (cAliasWs)->(DbSetOrder(1))
+
+        // * Se não encontrar o registro
+        If ! (cAliasWs)->( MsSeek( FWxFilial(cAliasWs) + jPath:GetJsonObject('id') ) )
+            oRest:SetStatusCode(500)
+            jResponse['errorId'] := 'ID002'
+            jResponse['error'] := 'ID não encontrado'
+            jResponse['solution'] := 'Código ID não encontrado na tabela ' + cAliasWs + ', informe outro código'
+
+        // * Define o retorno
+        Else    
+            jResponse['grupo'] := (cAliasWs)->BM_GRUPO
+            jResponse['desc'] := (cAliasWs)->BM_DESC
+        EndIf
+
+    // * Ao contrário, irá retornar uma mensagem que não foi encontrado
+    Else 
+        oRest:SetStatusCode(500)
+        jResponse['errorId'] := 'ID001'
+        jResponse['error'] := 'ID vazio'
+        jResponse['solution'] := 'informe o ID'
+    EndIf
+
+    oRest:SetKeyHeaderResponse('Content-Type', 'application/json')
+    oRest:SetResponse(jResponse:toJson())
+Return  
