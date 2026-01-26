@@ -1,0 +1,299 @@
+#Include 'tlpp-core.th'
+#Include 'tlpp-rest.th'
+
+Namespace Produtos
+
+@Get(endpoint='Produtos/get/unico/' ,;
+description='Retorna o código do produto e a sua descrição da SB1' )
+User Function ConsulProd()
+    Local aArea := FWGetArea()
+    Local jResponse := jsonObject():New() as Json
+    Local jPath                           as Json
+    Local cAlias    := 'SB1'              as Character
+
+    prepAmbiente.u_prepEnv()
+
+    jPath := jsonObject():New()
+    jPath := oRest:GetQueryRequest()
+
+    If jPath != Nil .AND. ! Empty(jPath:GetJsonObject('id'))
+
+        DbSelectArea(cAlias)
+        (cAlias)->(DbSetOrder(1))
+
+        If ! (cAlias)->( MsSeek( FWxFilial(cAlias) +  jPath:GetJsonObject('id') ) )
+            oRest:SetStatusCode(500)
+            jResponse[ 'errorId' ]  := 'ID002'
+            jResponse[ 'error' ]    := 'ID não encontrado'
+            jResponse[ 'solution' ] := 'código ID não encontrado na tabela ' + cAlias + ', informe outro código'
+        Else 
+            oRest:SetStatusCode(200)
+            jResponse[ 'cod' ]  := AllTrim( (cAlias)->B1_COD )
+            jResponse[ 'desc' ] := AllTrim( (cAlias)->B1_DESC )
+        EndIf
+
+    Else
+        oRest:SetStatusCode(500)
+        jResponse[ 'errorId' ]  := 'ID001'
+        jResponse[ 'error' ]    := 'ID vazio'
+        jResponse[ 'solution' ] := 'informe o ID'
+    EndIf
+
+    oRest:SetKeyHeaderResponse('content-type', 'application/json')
+    oRest:SetResponse(jResponse:toJson())
+
+    FreeObj(jResponse)
+    FreeObj(jPath)
+    RpcClearEnv()
+    FWRestArea(aArea)
+Return
+
+@Delete(endpoint='Produtos/delete/unico/', description='Endpoint para realizar a exclusão de produtos na SB1')
+User Function DelProd()
+    Local aArea            := FWGetArea()        as Array
+    Local aDados           := {}                 as Array
+    Local aLogAuto         := {}                 as Array
+    Local jResponse        := jsonObject():New() as Json
+    Local jPath            := Nil                as Json
+    Local cAlias           := 'SB1'              as Character
+    Local cDirLog          := '\x_logs\'         as Character
+    Local cArqLog          := ''                 as Character
+    Local cErrorLog        := ''                 as Character
+    Local nLinha           := 0                  as Numeric
+    Private lMsErroAuto    := .F.                as Logical
+    Private lMsHelAuto     := .T.                as Logical
+    Private lAutoErrNoFile := .T.                as Logical
+
+    prepAmbiente.u_prepEnv()
+
+    jPath := jsonObject():New()
+    jPath := oRest:GetQueryRequest('id')
+
+    If  jPath != Nil .AND. ! Empty(jPath:GetJsonObject('id'))
+
+        DbSelectArea( cAlias )
+        ( cAlias )->( DbSetOrder(1) )
+
+        If ! ( cAlias )->( MsSeek( FWxFilial(cAlias) + jPath:GetJsonObject('id') ) )
+            oRest:SetStatusCode(500)    
+            jResponse[ 'errorId' ]  := 'DEL002'
+            jResponse[ 'error' ]    := 'ID não encontrado'
+            jResponse[ 'solution' ] := 'código ID não encontrado na tabela ' + cAlias
+        Else 
+            aAdd( aDados, {'B1_COD', (cAlias)->B1_COD, Nil} )
+            aAdd( aDados, {'B1_DESC', (cAlias)->B1_DESC, Nil} )
+
+            MsExecAuto( {|a, b| MATA010(a, b)}, aDados, 5 )
+
+            If lMsErroAuto
+                cErrorLog := ''
+                aLogAuto := GetAutoGrLog()
+
+                For nLinha := 1 To Len(aLogAuto)
+                    cErrorLog += aLogAuto[nLinha] + CRLF
+                Next nLinha
+
+                If ! ExistDir(cDirLog)
+                    MakeDir(cDirLog)
+                EndIf
+
+                cArqLog := 'SB1_delete_' + DToS( Date() ) + '_' + StrTran( Time(), ':', '-' ) + '.log'
+                MemoWrite(cDirLog + cArqLog, cErrorLog)
+
+                oRest:SetStatusCode(500)
+                jResponse[ 'errorId' ]  := 'DEL003'
+                jResponse[ 'error' ]    := 'Erro na exclusão do registro'
+                jResponse[ 'solution' ] := 'Não foi possível excluir o registro, foi gerado um arquivo de log em ' + cDirLog + cArqLog + ' '
+            Else
+                jResponse[ 'note' ] := 'Registro excluído com sucesso!'
+                jResponse[ 'cod' ]  := AllTrim( (cAlias)->B1_COD )
+                jResponse[ 'desc' ] := AllTrim( (cAlias)->B1_DESC )
+            EndIf
+
+        EndIf
+    Else
+        oRest:SetStatusCode(500)
+        jResponse[ 'errorId' ]  := 'DEL003'
+        jResponse[ 'error' ]    := 'ID vazio'
+        jResponse[ 'solution' ] := 'Informe o ID'
+    EndIf
+
+    (cAlias)->( DbCloseArea() )
+    FWRestArea(aArea)
+    RpcClearEnv()
+
+    oRest:SetKeyHeaderResponse('content-type', 'application/json')
+    oRest:SetResponse(jResponse:toJson())
+
+    FreeObj(jResponse)
+    FreeObj(jPath)
+Return
+
+@Post(endpoint='/Produtos/post/unico/', description='Endpoint utilizado para gerar novo registro na SB1')
+User Function AddProd()
+    Local aArea          := FWGetArea()            as Array
+    Local aDados         := {}                     as Array
+    Local aLogAuto       := {}                     as Array
+    Local jResponse      := jsonObject():New()     as Json
+    Local jBody          := Nil                    as Json
+    Local cAlias         := 'SB1'                  as Character
+    Local cBody          := oRest:GetBodyRequest() as Character
+    Local nLinha         := 0                      as Numeric
+    Local cDirLog        := '\x_logs\'             as Character
+    Local cArqLog        := ''                     as Character
+    Local cErrorLog      := ''                     as Character
+    Private lMsErroAuto  := .F.                    as Logical
+    Private lMsHelpAuto  := .T.                    as Logical
+    Private lMsErrNoFile := .T.                    as Logical
+
+    prepAmbiente.u_prepEnv()
+
+    If ! Empty(cBody)
+        jBody := jsonObject():New()
+        jBody:fromJson(cBody)
+
+        If jBody != Nil
+
+            DbSelectArea(cAlias)
+            (cAlias)->(DbSetOrder(1))
+
+            If ! Empty(jBody:GetJsonObject( 'cod' ))
+                aadd(aDados, {'B1_COD'   , jBody:GetJsonObject( 'cod' )   , Nil})
+            EndIf 
+            
+            If ! Empty(jBody:GetJsonObject( 'desc' ))
+                aadd(aDados, {'B1_DESC'  , jBody:GetJsonObject( 'desc' )  , Nil})
+            EndIf
+
+            If ! Empty(jBody:GetJsonObject( 'tipo' ))
+                aadd(aDados, {'B1_TIPO'  , jBody:GetJsonObject( 'tipo' )  , Nil})
+            EndIf
+
+            If ! Empty(jBody:GetJsonObject( 'um' ))
+                aadd(aDados, {'B1_UM'    , jBody:GetJsonObject( 'um' )    , Nil})
+            EndIf
+
+            If ! Empty(jBody:GetJsonObject( 'locpad' ))
+                aadd(aDados, {'B1_LOCPAD', jBody:GetJsonObject( 'locpad' ), Nil})
+            EndIf
+
+            MsExecAuto({|a, b| MATA010(a, b)}, aDados, 3)
+
+            If lMsErroAuto
+                cErrorLog := ''
+                aLogAuto := GetAutoGrLog()
+
+                For nLinha := 1 To Len(aLogAuto)
+                    cErrorLog += aLogAuto[nLinha] + CRLF
+                Next nLinha
+
+                If ! ExistDir(cDirLog)
+                    MakeDir(cDirLog)
+                EndIf
+
+                cArqLog := 'SB1_post_' + DToS( Date() ) + '_' + StrTran( Time(), ':', '-') + '.log'
+                MemoWrite(cDirLog + cArqLog, cErrorLog)
+
+                oRest:SetStatusCode(500)
+                jResponse['errorId'] := 'NOV002'
+                jResponse['error'] := 'Erro na inclusão do registro'
+                jResponse['solution'] := 'Não foi possível incluir o registro, foi gerado um arquivo de log em ' + cDirLog + cArqLog + ' '
+            Else
+                oRest:SetStatusCode(201)
+                jResponse['note'] := 'Registro incluído com sucesso!'
+            EndIf
+        Else
+            oRest:SetStatusCode(500)
+            jResponse['errorId'] := 'NOV003'
+            jResponse['error'] := 'Falha na conversão STRING para JSON'
+            jResponse['solution'] := 'Não foi possível capturar o Body e trasnsformar em JSON, contato o Administrador.'
+        EndIf
+    Else 
+        oRest:SetStatusCode(500)
+        jResponse['errorId'] := 'NOV001'
+        jResponse['error'] := 'Body vazio'
+        jResponse['solution'] := 'Informe um Body na requisição'
+    EndIf
+
+    RpcClearEnv()
+    FWRestArea(aArea)
+
+    oRest:SetKeyHeaderResponse('content-type', 'application/json')
+    oRest:SetResponse(jResponse:toJson())
+Return
+
+@Patch(endpoint='/Produtos/patch/unico', description='Endpoint para realização de alteração parcial nos registros da tabela SB1 - Produtos')
+User Function UpdateProd() 
+    Local aArea          := FWGetArea()            as Array
+    Local jResponse      := jsonObject():New()     as Json
+    Local cBody          := oRest:GetBodyRequest() as Character
+    Local jBody          := Nil                    as Json
+    Local cAlias         := 'SB1'                  as Character
+    Local aDados         := {}                     as Array
+    Private lMsErroAuto  := .F.                    as Logical
+    Private lMsHelpAuto  := .T.                    as Logical
+    Private lMsErrNoFile := .T.                    as Logical
+
+    prepAmbiente.u_prepEnv()
+
+    jBody := jsonObject():New()
+    jBody:fromJson(cBody)
+
+    If jBody != Nil .AND. ! Empty( jBody:GetJsonObject('cod') )
+
+        DbSelectArea(cAlias)
+        (cAlias)->( DbSetOrder(1) )
+
+        If ! Empty( jBody:GetJsonObject('cod') )
+            aAdd(aDados, {'B1_COD', jBody:GetJsonObject('cod'), Nil})
+        EndIf
+
+        If ! Empty( jBody:GetJsonObject('desc') )
+            aAdd(aDados, {'B1_DESC', jBody:GetjsonObject('desc'), Nil})
+        EndIf
+
+        If ! Empty( jBody:GetJsonObject('tipo') )
+            aAdd(aDados, {'B1_TIPO', jBody:GetjsonObject('tipo'), Nil})
+        EndIf
+
+        If ! Empty( jBody:GetJsonObject('um') )
+            aAdd(aDados, {'B1_UM', jBody:GetJsonObject('um'), Nil})
+        EndIf
+
+        If ! Empty( jBody:GetJsonObject('locpad') )
+            aAdd(aDados, {'B1_LOCPAD', jBody:GetJsonObject('locpad'), Nil})
+        EndIf
+
+            If ! (cAlias)->( MsSeek( FWxFilial(cAlias) + jBody:GetJsonObject('cod') ) )
+                oRest:SetStatusCode(404)
+                jResponse['errorId'] := 'A004'
+                jResponse['erro'] := 'Produto não localizado na base de dados'
+                jResponse['solution'] := 'Informe um ID diferente'
+            Else 
+                MsExecAuto({|x, y| MATA010(x, y)}, aDados, 4)
+
+                If lMsErroAuto
+                    oRest:SetStatusCode(500)
+                    jResponse['errorId'] := 'A003'
+                    jResponse['error'] := 'Erro na execução automática'
+                    jResponse['solution'] := 'Contate o administrador'
+                Else
+                    oRest:SetStatusCode(200)
+                    jResponse['note'] := 'registro alterado parcialmente'
+                EndIf
+
+            EndIf
+        
+    Else
+        oRest:SetStatusCode(500)
+        jResponse['errorId'] := 'A002'
+        jResponse['error'] := 'O body está vazio ou o registro não existe'
+        jResponse['solution'] := 'Preencher o body e verificar se o registro existe'
+    EndIf
+
+    (cAlias)->( DbCloseArea() )
+    FWRestArea(aArea)
+
+    oRest:SetKeyHeaderResponse('content-type', 'application/json')
+    oRest:SetResponse(jResponse:toJson())
+Return
