@@ -31,13 +31,18 @@ User Function EXEC001()
         aAdd(aDados, {'B1_LOCPAD', MV_PAR05, Nil})
         aAdd(aDados, {'B1_GRUPO' , MV_PAR06, Nil})
 
+        BEGIN TRANSACTION 
+
         MsExecAuto( {|x, y| MATA010(x, y)}, aDados, 3 )
 
         If lMsErroAuto
+            DisarmTransaction()
             MostraErro()
         Else
             FWAlertSuccess('Produto: ' + SB1->B1_COD + ' incluído com sucesso.', 'Atenção')
         EndIf
+
+        END TRANSACTION
     EndIf
 
     RpcClearEnv()

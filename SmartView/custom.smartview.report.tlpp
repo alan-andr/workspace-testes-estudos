@@ -1,0 +1,13 @@
+#INCLUDE 'TLPP-CORE.TH'
+
+User Function reportExample()
+    Local aAreaBackup := FWGetArea() As Array
+    Local cReportName := '' As Character
+
+    cReportName := 'TReports_' + Lower('78CBB8F6-27AD-49A8-85EF-092F3A75635F') // ReportID da Trf_ReportsV2_Generated
+
+    RunTReports(cReportName, 'xProdutos', Nil)
+
+    FWRestArea(aAreaBackup)
+Return
+

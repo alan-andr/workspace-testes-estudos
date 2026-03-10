@@ -28,13 +28,18 @@ User Function AUTOFORN()
     aadd(aDados, {'A2_EST'   , cA2est , Nil})
     aadd(aDados, {'A2_CGC'   , cA2cgc , Nil})
 
+    BEGIN TRANSACTION
+
     MsExecAuto( {|a, b| MATA020(a, b)}, aDados, 3 )
 
     If lMsErroAuto 
+        DisarmTransaction()
         MostraErro()
     Else
         FWAlertSuccess('Fornecedor: ' + cA2nome + ' incluído com sucesso na SA2!', 'Atenção')
     EndIf
+
+    END TRANSACTION
 
     RpcClearEnv()
 

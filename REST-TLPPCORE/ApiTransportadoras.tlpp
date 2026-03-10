@@ -1,0 +1,102 @@
+#Include 'tlpp-core.th'
+#Include 'tlpp-rest.th'
+#Include 'TopConn.ch'
+
+Namespace Transportadoras
+
+@Get(endpoint='Transportadoras/get/unico', description='Retorna os dados da transportadora de acordo com o código pesquisa')
+User Function GetTransport()
+    Local aArea := FWGetArea() As Array
+    Local jResponse := jsonObject():New() As Json
+    Local jPath As Json
+    Local cAlias := 'SA4' As Character
+
+    prepAmbiente.u_PrepEnv()
+
+    jPath := jsonObject():New()
+    jPath := oRest:GetQueryRequest()
+
+    If jPath != Nil .AND. ! Empty(jPath:GetJsonObject('id'))
+
+        DbSelectArea(cAlias)
+        (cAlias)->( DbSetOrder(1) )
+
+        If ! (cAlias)->( MsSeek( FWxFilial(cAlias) + jPath:jsonObject('id') ) )
+            oRest:SetStatusCode(500)
+            jResponse['errorId'] := 'ID002'
+            jResponse['error'] := 'Transportadora não encontrada no banco de dados'
+            jResponse['solution'] := 'Verifique o código da transportadora ou tente outro'
+        Else 
+            oRest:SetStatusCode(200)
+            jResponse['cod'] := AllTrim((cAlias)->A4_COD)
+            jResponse['nome'] := AllTrim((cAlias)->A4_NOME)
+            jResponse['email'] := AllTrim((cAlias)->A4_EMAIL)
+        EndIf
+
+    Else 
+        oRest.SetStatusCode(500)
+        jResponse['errorId'] := 'ID001'
+        jResponse['error'] := 'ID vazio'
+        jResponse['solution'] := 'Informe outro ID'
+    EndIf
+
+    RpcClearEnv()
+    FWRestArea(aArea)
+    (cAlias)->( DbCloseArea() )
+
+    oRest:SetKeyHeaderResponse('content-type', 'application/json')
+    oRest:SetResponse(jResponse:toJson())
+Return
+
+@Post(endpoint='Transportadoras/post/new', description='Cadastra uma nova transportadora com base nos dados enviados no body')
+User Function PostTransport()
+    Local jResponse      := jsonObject():New()     as Json
+    Local jBody          := Nil                    as Json
+    Local cBody          := oRest:GetBodyRequest() as Character
+    Local cAlias         := 'SA4'                  as Character
+    Local aDados         := {}                     as Array
+    Local cDir           := ''
+    Local cErrorLog := ''
+    Local aLogAuto  := {}
+    Local cLinha := '' As
+    Local nLinha := 0 As Numeric
+    Private lMsErroAuto  := .F.                    as Logical
+    Private lMsHelpAuto  := .T.                    as Logical
+    Private lMsErrNoFile := .T.                    as Logical
+
+    prepAmbiente.u_PrepEnv()
+
+    If ! Empty(cBody)
+        jBody := jsonObject():New()
+        jBody:fromJson(cBody)
+
+        If jBody != Nil 
+            DbSelectArea(cAlias)
+            (cAlias)->( DbSetOrder(1) )
+
+            If ! Empty(jBody:GetJsonObject('cod'))
+                aAdd(aDados, {'A4_COD', jBody:GetJsonObject('cod'), Nil})
+            EndIf
+
+            If ! Empty(jBody:GetJsonObject('nome'))
+                aAdd(aDados, {'A4_NOME', jBody:GetJsonObject('nome'), Nil})
+            EndIf
+
+            If ! Empty(jBody:GetJsonObject('email'))
+                aAdd(aDados, {'A4_EMAIL', jBody:GetJsonObject('email'), Nil})
+            EndIf
+
+            MsExecAuto({|x, y| MATA050()}, aDados, 3)
+
+            If lMsErroAuto
+
+            Else
+
+            EndIf
+        Else
+
+        EndIf
+    Else
+
+    EndIf
+Return

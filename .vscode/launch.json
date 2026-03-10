@@ -311,8 +311,69 @@
 		},
 		{
 			"label": "U_RELPDFIN"
+		},
+		{
+			"label": "U_JSON001"
+		},
+		{
+			"label": "U_EXEC001"
+		},
+		{
+			"label": "U_AUTOFORN"
+		},
+		{
+			"label": "U_GRUPOPRODNOV"
+		},
+		{
+			"label": "U_ConsulProd"
+		},
+		{
+			"label": "U_EXEC003"
+		},
+		{
+			"label": "U_EXEC004"
+		},
+		{
+			"label": "U_EXEC005"
+		},
+		{
+			"label": "U_EXEC006"
+		},
+		{
+			"label": "U_EXEC007"
+		},
+		{
+			"label": "U_DIALOG001"
+		},
+		{
+			"label": "U_MODEL001"
+		},
+		{
+			"label": "U_ZEXE486"
+		},
+		{
+			"label": "SIGAMDI"
+		},
+		{
+			"label": "U_zTeste2"
+		},
+		{
+			"args": [],
+			"label": "U_zTeste"
+		},
+		{
+			"label": "U_VERIFPROD"
+		},
+		{
+			"label": "U_RELATCREDISHOP"
+		},
+		{
+			"label": "U_RELCREDI"
+		},
+		{
+			"label": "U_JOB001"
 		}
 	],
-	"lastProgramExecuted": "U_RELPDFIN",
+	"lastProgramExecuted": "U_JOB001",
 	"lastProgramArguments": []
 }
