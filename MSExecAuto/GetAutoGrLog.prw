@@ -9,7 +9,7 @@ User Function EXEC007()
     Local cArquivo           := ''
     Local aLogErro           := {}
     Local cTextoErro         := ''
-    Private lMsAutoErrNoFile := .T.
+    Private lAutoErrNoFile   := .T.
     Private lMsHelpAuto      := .T.
     Private lMsErroAuto      := .F.
 

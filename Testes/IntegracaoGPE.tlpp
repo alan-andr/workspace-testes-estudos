@@ -1,0 +1,560 @@
+// Classe ADVPL para API TLPP de GET Funcionários
+
+#include "totvs.ch"
+#Include "rwmake.ch"
+#include "protheus.ch"
+#INCLUDE "topconn.ch"
+#include "tbicode.ch"
+#include "tbiconn.ch"
+#include "tlpp-core.th"
+#include "tlpp-rest.th"
+
+/*
+Classe API REST TLPP para integração com o GPE - Gestão de Pessoas 
+vscode: fenixxseguranca165655.protheus.cloudtotvs.com.br:2072
+
+https://fenixxseguranca165655.protheus.cloudtotvs.com.br:2057/rest
+
+Usuário: leandro.ayalac          
+Senha: 123456
+*/
+CLASS GPEAPI
+
+
+    PUBLIC METHOD New()
+    PRIVATE METHOD QRYSRA()
+    PRIVATE METHOD QRYSRV()
+    PRIVATE METHOD QRYCC()
+
+    //1 – LISTAGEM DE FUNCIONÁRIOS
+    @Get( endpoint="gpeapi/getfuncionarios",description='Consulta Funcionários' )
+    PUBLIC METHOD GetFuncionarios()
+    
+    //2 – API PARA TROCA DE CENTROS DE CUSTOS
+    @Post( endpoint="gpeapi/transferencia",description='Transferência de Funcionários' )
+    PUBLIC METHOD TRANSF()
+
+    //3 – API PARA CONSULTA DE VERBAS
+    @Get( endpoint="gpeapi/getverbas",description='Consulta Verbas' )
+    PUBLIC METHOD GetVerbas()
+    
+    //4 – API PARA CONSULTA DE CENTRO DE CUSTOS
+    @Get( endpoint="gpeapi/getcc",description='Consulta Centro de Custos' )
+    PUBLIC METHOD GetCC()
+
+    //5 – API PARA INCLUIR VERBAS NA FOLHA
+    @Post( endpoint="gpeapi/incverba",description='Incluir Verbas' )
+    PUBLIC METHOD INCVERBA()
+    
+
+ENDCLASS
+
+//Construtor da classe
+METHOD New() Class GPEAPI
+    
+RETURN
+
+//Retorna a lista de funcionários em formato JSON
+METHOD GetFuncionarios() Class GPEAPI
+    
+    Local lRet          := .T.
+	Local oResult		:= JsonObject():new()
+    Local aRet          := {}
+    Local cJson         := oRest:GetBodyRequest()
+    Local oJson         := JsonObject():new()
+
+    //Se tiver obrigatoriedade de parametros
+    if !Empty( cJson )
+        //Recpero o json enviado se houver algo
+        oJson:FromJson( cJson )
+    Endif
+
+    //prepara os dados e retorna todos os funcionários ativos
+    aRet := ::QRYSRA(oJson)
+    
+    oResult["type"]   := "success"
+    oResult["code"]   := "200"
+    oResult["items"]  := aRet
+
+    oRest:setResponse( oResult:toJson())
+    
+RETURN lRet
+
+
+/*
+Retorna as verbas cadastradas no sistema
+*/
+METHOD GetVerbas() Class GPEAPI
+    
+    Local lRet          := .T.
+	Local oResult		:= JsonObject():new()
+    Local aRet          := {}
+    Local cJson         := oRest:GetBodyRequest()
+    Local oJson         := JsonObject():new()
+
+    //Se tiver obrigatoriedade de parametros
+    if !Empty( cJson )
+        //Recpero o json enviado se houver algo
+        oJson:FromJson( cJson )
+    Endif
+
+    //prepara os dados e retorna todos os funcionários ativos
+    aRet := ::QRYSRV(oJson)
+    
+    oResult["type"]   := "success"
+    oResult["code"]   := "200"
+    oResult["items"]  := aRet
+
+    oRest:setResponse( oResult:toJson())
+    
+RETURN lRet
+
+/*
+Executa a transferencia de funcionários
+
+Array com as informações dos funcionários a serem transferidos:
+aAutoItens[x][1] - Filial Origem do funcionário
+aAutoItens[x][2] - Matrícula Origem do funcionário
+aAutoItens[x][3] - Array com os campos do funcionário cuja transferência será efetuada
+aAutoItens[x][3][y][1] - Nome do campo que sofrerá transferência (SRA)
+aAutoItens[x][3][y][2] - Novo conteúdo - Destino
+
+Onde todos os conteúdos serão em formato String e:
+x = número de funcionários da filial logada a serem transferidos e,
+y = número de campos a serem transferidos de cada funcionário.
+
+dDataTransf
+Data da transferência (opcional)
+Formato: data
+
+Caso não seja passada por parâmetro, a data utilizada será a data base do sistema.
+lAutomato Valor lógico que deve ser enviado com valor '.T.' caso não seja desejada a exibição de nenhuma interação com o usuário.
+https://centraldeatendimento.totvs.com/hc/pt-br/articles/4411438881943-RH-Linha-Protheus-GPE-Execauto-para-Transfer%C3%AAncias-GPEA180
+*/
+
+METHOD TRANSF() Class GPEAPI
+    
+    Local aAutoItens    := {}
+    Local aCampos       := {}
+    Local aLogAuto      := {}
+    Local dDataTransf   := CtoD("//")
+    Local cJson         := oRest:GetBodyRequest()
+    Local oJson         := JsonObject():new()
+    local oResult       := JsonObject():new()
+    Private lMsErroAuto := .F.
+
+    RpcSetEnv("99", "01")
+
+    //Se tiver obrigatoriedade de parametros
+    if !Empty( cJson )
+        //Recpero o json enviado se houver algo
+        oJson:FromJson( cJson )
+    else
+        SetRestFault(400,EncodeUtf8("Parametros não enviados no body da requisição"))
+        return .F.
+    Endif
+
+    ConOut(Repl("-",80))
+    ConOut("Inicio: "+Time())
+    ConOut(PadC("Rotina Automatica Transferencia de funcionarios - SRA",80))
+
+    dDataTransf := Date() // TODO dDatabase 
+    aAdd( aCampos, { "RA_FILIAL", oJson['campos'][1]['filialdestino'] } ) //Filial Destino
+    aAdd( aCampos, { "RA_MAT" , oJson['campos'][1]['matriculadestino'] } ) //Matrícula Destino
+    aAdd( aCampos, { "RA_CC", oJson['campos'][1]['ccdestino'] } ) //Centro de Custo Destino
+    aAdd( aCampos, { "RA_PROCES", oJson['campos'][1]['processodestino'] } ) //Processo Destino
+    aAdd( aAutoItens, { oJson['filialorigem'], oJson['matriculaorigem'], aCampos } ) //Filail e Matrícula origem + aCampos
+
+    //chamada ExecAuto
+    MSExecAuto( {|x,y,z,w| GPEA180(x,y,z,w)}, 6, aAutoItens, dDataTransf, .T. )
+
+    If !lMsErroAuto
+        oResult["type"]   := "success"
+        oResult["code"]   := "200"
+        oResult["message"]:= "Transferência realizada com sucesso!"
+        oRest:setResponse( oResult:toJson())
+    Else
+        aLogAuto:= MostraErro('Null')
+        varinfo("aLogAuto",aLogAuto)
+        SetRestFault(422,EncodeUtf8(aLogAuto))
+        ConOut("Erro na Transferencia!")
+    EndIf
+
+    ConOut("Fim : "+Time())
+    ConOut(Repl("-",80))
+
+    RpcClearEnv()
+Return NIL
+
+/*
+Retorna os Centros de Custo cadastrados no sistema
+*/
+
+METHOD GetCC() Class GPEAPI
+
+	Local oResult		:= JsonObject():new()
+    Local aRet          := {}
+    Local cJson         := oRest:GetBodyRequest()
+    Local oJson         := JsonObject():new()
+
+    //Se tiver obrigatoriedade de parametros
+    if !Empty( cJson )
+        //Recpero o json enviado se houver algo
+        oJson:FromJson( cJson )
+    Endif
+
+    //prepara os dados e retorna todos os funcionários ativos
+    aRet := ::QRYCC(oJson)
+    
+    oResult["type"]   := "success"
+    oResult["code"]   := "200"
+    oResult["items"]  := aRet
+
+    oRest:setResponse( oResult:toJson())
+
+
+RETURN NIL
+
+/*
+Realiza a inclusão das verbas na folha de pagamento
+*/
+METHOD INCVERBA() Class GPEAPI
+
+    //Declaracao das variaveis de controle
+    Local aCabAuto  := {}
+    Local aItemAuto := {}
+    Local aLinha    := {}
+    Local nOpc      :=3
+    Local cJson     := oRest:GetBodyRequest()
+    Local oJson     := JsonObject():new()
+    local nx
+    local oResult   := JsonObject():new()
+
+    Private lMsErroAuto := .F.
+
+    //Se tiver obrigatoriedade de parametros
+    if !Empty( cJson )
+        //Recpero o json enviado se houver algo
+        oJson:FromJson( cJson )
+    else
+        SetRestFault(400,EncodeUtf8("Parametros não enviados no body da requisição"))
+        return .F.
+    Endif
+
+    //Criando variaveis do cabecalho
+    // Acessando as propriedades diretamente do objeto oJson
+    aAdd( aCabAuto, { 'RA_FILIAL' , oJson['ra_filial'] , nil } )
+    aAdd( aCabAuto, { 'RA_MAT'    , oJson['ra_mat']    , nil } )
+    aAdd( aCabAuto, { 'CROTEIRO'  , oJson['croteiro']  , nil } )
+    aAdd( aCabAuto, { 'CNUMPAGTO' , oJson['cnumpagto'] , nil } )
+    aAdd( aCabAuto, { 'CPERIODO'  , oJson['cperiodo']  , nil } )
+
+    //Criando variaveis dos itens
+    for nX := 1 to Len(oJson['itens'])
+        aLinha := {}
+        aAdd(aLinha, {'RGB_FILIAL' , oJson['itens'][nX]['rgb_filial'] , nil})
+        aAdd(aLinha, {'RGB_MAT'    , oJson['itens'][nX]['rgb_mat']    , nil})
+        aAdd(aLinha, {'RGB_SEMANA' , oJson['itens'][nX]['rgb_semana'] , nil})
+        aAdd(aLinha, {'RGB_PD'     , oJson['itens'][nX]['rgb_pd']     , nil})
+        aAdd(aLinha, {'RGB_TIPO1'  , oJson['itens'][nX]['rgb_tipo1']  , nil})
+        aAdd(aLinha, {'RGB_HORAS'  , oJson['itens'][nX]['rgb_horas']  , nil})
+        aAdd(aLinha, {'RGB_VALOR'  , oJson['itens'][nX]['rgb_valor']  , nil})
+        aAdd(aLinha, {'RGB_DTREF'  , CTOD(oJson['itens'][nX]['rgb_dtref']) , nil})
+        
+        aAdd(aLinha, {'RGB_CC'     , oJson['itens'][nX]['rgb_cc']     , nil})
+        aAdd(aLinha, {'RGB_PARCEL' , oJson['itens'][nX]['rgb_parcel'] , nil})
+        aAdd(aLinha, {'RGB_CODFUN' , oJson['itens'][nX]['rgb_codfun'] , nil})
+        aAdd(aLinha, {'RGB_DEPTO'  , oJson['itens'][nX]['rgb_depto']  , nil})
+
+        //Atribuindo variavel para MsExecAuto
+        aadd(aItemAuto,aLinha)
+    
+    next nX
+
+    //Chama a rotina
+    MsExecAuto({|a, b, c, d| GPEA580(a,b,c,d)},nil, aCabAuto, aItemAuto,nOpc)
+
+    If !lMsErroAuto
+        oResult["type"]   := "success"
+        oResult["code"]   := "200"
+        oResult["message"]:= "verba incluída na folha com sucesso!"
+        oRest:setResponse( oResult:toJson())
+    Else
+        aLogAuto:= MostraErro('Null')
+        varinfo("aLogAuto",aLogAuto)
+        SetRestFault(422,EncodeUtf8(aLogAuto))
+        ConOut("Erro ao incluir verba na folha!")
+    EndIf
+
+RETURN NIL
+
+METHOD QRYSRV(oObJs) Class GPEAPI
+
+    local aSrv := {}
+    local cSql := ""
+
+    cSql := "SELECT RV_FILIAL, RV_COD, RV_DESC,RV_DESCDET, RV_TIPOCOD, RV_TIPO, R_E_C_N_O_ AS RECNO"+;
+            " FROM "+RETSQLNAME("SRV")+" SRV "+;
+            " WHERE D_E_L_E_T_ = ' '" 
+           // "WHERE (CONVERT(VARCHAR(8),DATEADD(DAY,CONVERT(INT,CONCAT(ASCII(SUBSTRING(RV_USERLGI,12,1))-50,ASCII(SUBSTRING(RV_USERLGI,16,1))-50))+IIF(SUBSTRING(RV_USERLGI,8,1)='<',10000,0),'1996-01-01'),112) BETWEEN '"+DTOS(CTOD(oObJs['datainicial']))+"' AND '"+DTOS(CTOD(oObJs['datafinal']))+"' OR CONVERT(VARCHAR(8),DATEADD(DAY,CONVERT(INT,CONCAT(ASCII(SUBSTRING(RV_USERLGA,12,1))-50,ASCII(SUBSTRING(RV_USERLGA,16,1))-50))+IIF(SUBSTRING(RV_USERLGA,8,1)='<',10000,0),'1996-01-01'),112) BETWEEN '"+DTOS(CTOD(oObJs['datainicial']))+"' AND '"+DTOS(CTOD(oObJs['datafinal']))+"')"+;
+    
+    TcQuery cSql New Alias "QRYSRV"
+
+    
+    While !QRYSRV->(Eof())
+
+        SRV->(dbGoTo(QRYSRV->RECNO))
+
+        //Filtra por data
+        cDtInc := FWLEUSERLG('RV_USERLGI', 2)
+        cDtAlt := FWLEUSERLG('RV_USERLGA', 2)
+
+        if empty(cDtAlt)
+            QRYSRV->(DbSkip())
+            loop
+        endif
+            
+        if !empty(cDtInc)
+            If !(ctod(cDtInc) >= ctod(oObJs['datainicial']) .and. ctod(cDtInc) <= ctod(oObJs['datafinal'])) 
+                QRYSRV->(DbSkip())
+                loop
+            endif
+        endif
+        if !empty(cDtAlt)
+            if !(ctod(cDtAlt) >= ctod(oObJs['datainicial']) .and. ctod(cDtAlt) <= ctod(oObJs['datafinal']))
+                QRYSRV->(DbSkip())
+                loop
+            endif
+        endif
+
+        oObjSrv := JsonObject():new()
+
+        oObjSrv["filial"]           := QRYSRV->RV_FILIAL
+        oObjSrv["codigo"]           := QRYSRV->RV_COD
+        oObjSrv["descricao"]        := Alltrim(QRYSRV->RV_DESC)
+        oObjSrv["descdetalhada"]    := Alltrim(QRYSRV->RV_DESCDET)
+        oObjSrv["tipocodigo"]       := X3Combo("RV_TIPOCOD", QRYSRV->RV_TIPOCOD)
+        oObjSrv["tipo"]             := X3Combo("RV_TIPO", QRYSRV->RV_TIPO)
+        oObjSrv["data_inclusao"]    := cDtInc
+        oObjSrv["data_alteracao"]   := cDtAlt
+        
+        
+        AAdd(aSrv,oObjSrv)
+        
+        QRYSRV->(DbSkip())
+    
+    Enddo
+
+    QRYSRV->(DbCloseArea())
+
+
+RETURN aSrv
+
+
+METHOD QRYSRA(oObJs) Class GPEAPI
+
+    local aSra := {}
+    local cSql := ""
+
+    cSql := "SELECT RA_FILIAL, RA_MAT, RA_NOME, RA_CC, RA_LOGRTP, RA_ENDEREC, RA_BAIRRO, RA_MUNICIP, RA_ESTADO, RA_CEP, RA_TELEFON, RA_CIC, RA_PIS, RA_RG,"+;
+            " CONVERT(VARCHAR(8),DATEADD(DAY,CONVERT(INT,CONCAT(ASCII(SUBSTRING(RA_USERLGI,12,1))-50,ASCII(SUBSTRING(RA_USERLGI,16,1))-50))+IIF(SUBSTRING(RA_USERLGI,8,1)='<',10000,0),'1996-01-01'),112) AS RA_USERLGI, CONVERT(VARCHAR(8),DATEADD(DAY,CONVERT(INT,CONCAT(ASCII(SUBSTRING(RA_USERLGA,12,1))-50,ASCII(SUBSTRING(RA_USERLGA,16,1))-50))+IIF(SUBSTRING(RA_USERLGA,8,1)='<',10000,0),'1996-01-01'),112) AS RA_USERLGA,"+;
+            " RA_SEXO, SRA.R_E_C_N_O_ AS RECNO, SX51.X5_DESCRI AS SITFOLH, RA_ADMISSA, RA_DEMISSA,RA_CODFUNC,RA_SEXO,SX52.X5_DESCRI AS NATURAL,RA_MUNNASC, SX53.X5_DESCRI AS NACIONA, "+;
+            " RA_ESTCIVI,RA_MAE, RA_PAI,  "+;
+            " SX54.X5_DESCRI AS GRINRAI, RCE_DESCRI AS SINDICATO, RA_NASC, RA_BCDEPSA, RA_CTDEPSA, RA_CTDEPSA,RA_SALARIO, SX56.X5_DESCRI AS RA_RGUF, SX55.X5_DESCRI AS RA_RGORG, RA_DTRGEXP, "+;
+            " RA_TITULOE, RA_ZONASEC, RA_SECAO, RA_NUMCP, RA_SERCP, SX57.X5_DESCRI AS RA_UFCP,RA_DTCPEXP,RA_RESERVI,RA_HABILIT,RA_CNHORG,RA_DTVCCNH, RA_DDDCELU,RA_DDDFONE,RA_NUMCELU, " +;
+            " RH_DFERIAS, RH_DATAINI, RH_DATAFIM "+;
+            " FROM "+RETSQLNAME("SRA")+" SRA "+;
+            " LEFT JOIN "+RETSQLNAME("SX5")+" SX51 ON SX51.X5_TABELA = '31' AND SX51.X5_CHAVE = SRA.RA_SITFOLH AND SX51.D_E_L_E_T_ = ' '"+;
+            " LEFT JOIN "+RETSQLNAME("SX5")+" SX52 ON SX52.X5_TABELA = '12' AND SX52.X5_CHAVE = SRA.RA_NATURAL AND SX52.D_E_L_E_T_ = ' '"+;
+            " LEFT JOIN "+RETSQLNAME("SX5")+" SX53 ON SX53.X5_TABELA = '34' AND SX53.X5_CHAVE = SRA.RA_NACIONA AND SX53.D_E_L_E_T_ = ' '"+;
+            " LEFT JOIN "+RETSQLNAME("SX5")+" SX54 ON SX54.X5_TABELA = '26' AND SX54.X5_CHAVE = SRA.RA_GRINRAI AND SX54.D_E_L_E_T_ = ' '"+;
+            " LEFT JOIN "+RETSQLNAME("SX5")+" SX55 ON SX55.X5_TABELA = '64' AND SX55.X5_CHAVE = SRA.RA_RGORG   AND SX55.D_E_L_E_T_ = ' '"+;
+            " LEFT JOIN "+RETSQLNAME("SX5")+" SX56 ON SX56.X5_TABELA = '12' AND SX56.X5_CHAVE = SRA.RA_RGUF AND SX56.D_E_L_E_T_ = ' '"+;
+            " LEFT JOIN "+RETSQLNAME("SX5")+" SX57 ON SX57.X5_TABELA = '12' AND SX57.X5_CHAVE = SRA.RA_UFCP AND SX57.D_E_L_E_T_ = ' '"+;
+            " LEFT JOIN "+RETSQLNAME("RCE")+" RCE ON RCE_FILIAL = '"+xFilial('RCE')+"' AND RCE_CODIGO = SRA.RA_SINDICA AND RCE.D_E_L_E_T_ = ' '"+;
+            " LEFT JOIN "+RETSQLNAME("SRH")+" SRH ON RH_FILIAL = SRA.RA_FILIAL AND RH_MAT = SRA.RA_MAT AND RH_ROTEIR = 'FER' AND SRH.D_E_L_E_T_ = ' '"+;
+            " WHERE (CONVERT(VARCHAR(8),DATEADD(DAY,CONVERT(INT,CONCAT(ASCII(SUBSTRING(RA_USERLGI,12,1))-50,ASCII(SUBSTRING(RA_USERLGI,16,1))-50))+IIF(SUBSTRING(RA_USERLGI,8,1)='<',10000,0),'1996-01-01'),112) BETWEEN '"+DTOS(CTOD(oObJs['datainicial']))+"' AND '"+DTOS(CTOD(oObJs['datafinal']))+"' OR CONVERT(VARCHAR(8),DATEADD(DAY,CONVERT(INT,CONCAT(ASCII(SUBSTRING(RA_USERLGA,12,1))-50,ASCII(SUBSTRING(RA_USERLGA,16,1))-50))+IIF(SUBSTRING(RA_USERLGA,8,1)='<',10000,0),'1996-01-01'),112)BETWEEN '"+DTOS(CTOD(oObJs['datainicial']))+"' AND '"+DTOS(CTOD(oObJs['datafinal']))+"')"+;
+            " AND SRA.D_E_L_E_T_ = ' ' "
+            if oObJs:hasProperty("matriculainicial") .and. oObJs:hasProperty("matriculafinal")
+                cSql += " AND RA_MAT BETWEEN '"+oObJs['matriculainicial']+"' AND '"+oObJs['matriculafinal']+"' "
+            endif
+            cSql += " AND RA_FILIAL = '"+oObJs['filial']+"' "
+    
+    //SA1->(FWLEUSERLG(“A1_USERLGI”, 1))+space(1)+SA1->(FWLEUSERLG(“A1_USERLGI”, 2))
+
+    TcQuery cSql New Alias "QRYSRA"
+
+    
+    While !QRYSRA->(Eof())
+
+        SRA->(dbGoTo(QRYSRA->RECNO))
+        SRJ->(Dbseek(Xfilial("SRJ")+QRYSRA->RA_CODFUNC))
+
+        //Filtra por data
+        cDtInc := FWLEUSERLG('RA_USERLGI', 2)
+        cDtAlt := FWLEUSERLG('RA_USERLGA', 2)
+
+        If !(ctod(cDtInc) >= ctod(oObJs['datainicial']) .and. ctod(cDtInc) <= ctod(oObJs['datafinal'])) 
+            QRYSRA->(DbSkip())
+            loop
+        endif
+
+        if !empty(cDtAlt)
+            if !(ctod(cDtAlt) >= ctod(oObJs['datainicial']) .and. ctod(cDtAlt) <= ctod(oObJs['datafinal']))
+                QRYSRA->(DbSkip())
+                loop
+            endif
+        endif
+
+        oObjSra := JsonObject():new()
+
+        oObjSra["filial"] := QRYSRA->RA_FILIAL
+        oObjSra["matricula"] := QRYSRA->RA_MAT
+        oObjSra["nome"] := Alltrim(QRYSRA->RA_NOME)
+        oObjSra["centro_custo"] := QRYSRA->RA_CC
+        oObjSra["logradouro"] := Alltrim(QRYSRA->RA_LOGRTP)
+        oObjSra["endereco"] := Alltrim(QRYSRA->RA_ENDEREC)
+        oObjSra["bairro"] := Alltrim(QRYSRA->RA_BAIRRO)
+        oObjSra["municipio"] := Alltrim(QRYSRA->RA_MUNICIP)
+        oObjSra["estado"] := Alltrim(QRYSRA->RA_ESTADO)
+        oObjSra["cep"] := Alltrim(QRYSRA->RA_CEP)
+        oObjSra["telefone"] := Alltrim(QRYSRA->RA_TELEFON)
+        oObjSra["celular"] := Alltrim(QRYSRA->RA_NUMCELU)
+        oObjSra["ddd_celular"] := Alltrim(QRYSRA->RA_DDDCELU)
+        oObjSra["ddd_telefone"] := Alltrim(QRYSRA->RA_DDDFONE)
+        oObjSra["cic"] := alltrim(QRYSRA->RA_CIC)
+        oObjSra["pis"] := alltrim(QRYSRA->RA_PIS)
+        oObjSra["rg"] := alltrim(QRYSRA->RA_RG)
+        oObjSra["sexo"] := alltrim(QRYSRA->RA_SEXO)
+        oObjSra["data_inclusao"] := iif(!empty(cDtInc), DTOC(STOD(cDtInc)), "")
+        oObjSra["data_alteracao"] := iif(!empty(cDtAlt), DTOC(STOD(cDtAlt)), "")
+        oObjSra["situacao_folha"] := Alltrim(QRYSRA->SITFOLH)
+        oObjSra["data_admissao"] := iif(!empty(QRYSRA->RA_ADMISSA), DTOC(STOD(QRYSRA->RA_ADMISSA)), "")
+        oObjSra["data_demissao"] := iif(!empty(QRYSRA->RA_DEMISSA), DTOC(STOD(QRYSRA->RA_DEMISSA)), "")
+        oObjSra["cod_funcao"] := Alltrim(SRJ->RJ_FUNCAO)
+        oObjSra["funcao"] := Alltrim(SRJ->RJ_DESC)
+        oObjSra["sexo"] := alltrim(QRYSRA->RA_SEXO)
+        oObjSra["naturalidade"] := Alltrim(QRYSRA->NATURAL)
+        oObjSra["municipio_nascimento"] := Alltrim(QRYSRA->RA_MUNNASC)
+        oObjSra["nacionalidade"] := Alltrim(QRYSRA->NACIONA)
+        oObjSra["estado_civil"] := QRYSRA->RA_ESTCIVI
+        oObjSra["nome_mae"] := Alltrim(QRYSRA->RA_MAE)
+        oObjSra["nome_pai"] := Alltrim(QRYSRA->RA_PAI)
+        oObjSra["grau_instrucao"] := Alltrim(QRYSRA->GRINRAI)
+        oObjSra["sindicato"] := Alltrim(QRYSRA->SINDICATO)
+        oObjSra["data_nascimento"] := DTOC(STOD(QRYSRA->RA_NASC))
+        oObjSra["codigo_banco"] := alltrim(QRYSRA->RA_BCDEPSA)
+        oObjSra["agencia"] := alltrim(QRYSRA->RA_CTDEPSA)
+        oObjSra["conta_corrente"] := alltrim(QRYSRA->RA_CTDEPSA)
+        oObjSra["salario"] := QRYSRA->RA_SALARIO
+        oObjSra["rg_uf"] := Alltrim(QRYSRA->RA_RGUF)
+        oObjSra["rg_orgao_expedidor"] := Alltrim(QRYSRA->RA_RGORG)
+        oObjSra["rg_data_expedicao"] := iif(!empty(QRYSRA->RA_DTRGEXP), DTOC(STOD(QRYSRA->RA_DTRGEXP)), "")
+        oObjSra["titulo_eleitor"] := Alltrim(QRYSRA->RA_TITULOE)
+        oObjSra["zona_eleitoral"] := Alltrim(QRYSRA->RA_ZONASEC)
+        oObjSra["secao_eleitoral"] := Alltrim(QRYSRA->RA_SECAO)
+        oObjSra["numero_ctps"] := Alltrim(QRYSRA->RA_NUMCP)
+        oObjSra["serie_ctps"] := Alltrim(QRYSRA->RA_SERCP)
+        oObjSra["uf_ctps"] := Alltrim(QRYSRA->RA_UFCP)
+        oObjSra["data_expedicao_ctps"] := iif(!empty(QRYSRA->RA_DTCPEXP), DTOC(STOD(QRYSRA->RA_DTCPEXP)), "")
+        oObjSra["reservista"] := Alltrim(QRYSRA->RA_RESERVI)
+        oObjSra["habilitacao"] := Alltrim(QRYSRA->RA_HABILIT)
+        oObjSra["cnh_orgao_expedidor"] := Alltrim(QRYSRA->RA_CNHORG)
+        oObjSra["cnh_data_validade"] := iIf(!empty(QRYSRA->RA_DTVCCNH), DTOC(STOD(QRYSRA->RA_DTVCCNH)), "")
+        oObjSra["ferias_data_inicio"] := iIf(!empty(QRYSRA->RH_DATAINI), DTOC(STOD(QRYSRA->RH_DATAINI)), "")
+        oObjSra["ferias_data_fim"] := iIf(!empty(QRYSRA->RH_DATAFIM), DTOC(STOD(QRYSRA->RH_DATAFIM)), "")
+        oObjSra["ferias_dias"] := QRYSRA->RH_DFERIAS
+
+        AAdd(aSra,oObjSra)
+        
+        QRYSRA->(DbSkip())
+    
+    Enddo
+
+    QRYSRA->(DbCloseArea())
+
+RETURN aSra
+
+
+METHOD QRYCC(oObJs) Class GPEAPI
+
+    local aCc := {}
+    local cSql := ""
+
+    cSql := "SELECT CTT_FILIAL, CTT_CUSTO, CTT_CLASSE, CTT_DESC01, CTT_DESC02, R_E_C_N_O_ AS RECNO"+;
+            " FROM "+RETSQLNAME("CTT")+" CTT "+;
+            " WHERE D_E_L_E_T_ = ' ' " 
+            //" WHERE (CONVERT(VARCHAR(8),DATEADD(DAY,CONVERT(INT,CONCAT(ASCII(SUBSTRING(CTT_USERGI,12,1))-50,ASCII(SUBSTRING(CTT_USERGI,16,1))-50))+IIF(SUBSTRING(CTT_USERGI,8,1)='<',10000,0),'1996-01-01'),112) BETWEEN '"+DTOS(CTOD(oObJs['datainicial']))+"' AND '"+DTOS(CTOD(oObJs['datafinal']))+"' OR CONVERT(VARCHAR(8),DATEADD(DAY,CONVERT(INT,CONCAT(ASCII(SUBSTRING(CTT_USERGA,12,1))-50,ASCII(SUBSTRING(CTT_USERGA,16,1))-50))+IIF(SUBSTRING(CTT_USERGA,8,1)='<',10000,0),'1996-01-01'),112) BETWEEN '"+DTOS(CTOD(oObJs['datainicial']))+"' AND '"+DTOS(CTOD(oObJs['datafinal']))+"')"+;
+    
+    TcQuery cSql New Alias "QRYCTT"
+
+    While !QRYCTT->(Eof())
+    
+        CTT->(dbGoTo(QRYCTT->RECNO))
+         //Filtra por data
+        cDtInc := FWLEUSERLG('CTT_USERGI', 2)
+        cDtAlt := FWLEUSERLG('CTT_USERGA', 2)
+
+        If !(ctod(cDtInc) >= ctod(oObJs['datainicial']) .and. ctod(cDtInc) <= ctod(oObJs['datafinal'])) 
+            QRYCTT->(DbSkip())
+            loop
+        endif
+
+        if !empty(cDtAlt)
+            if !(ctod(cDtAlt) >= ctod(oObJs['datainicial']) .and. ctod(cDtAlt) <= ctod(oObJs['datafinal']))
+                QRYCTT->(DbSkip())
+                loop
+            endif
+        endif
+        
+        oObjCc := JsonObject():new()
+
+        oObjCc["filial"]            := Alltrim(QRYCTT->CTT_FILIAL)
+        oObjCc["codigo"]            := Alltrim(QRYCTT->CTT_CUSTO)
+        oObjCc["classe"]            := Alltrim(QRYCTT->CTT_CLASSE)
+        oObjCc["descricao1"]        := Alltrim(QRYCTT->CTT_DESC01)
+        oObjCc["descricao2"]        := Alltrim(QRYCTT->CTT_DESC02)
+        oObjCc["data_inclusao"]     := iif(!empty(cDtInc), DTOC(STOD(cDtInc)), "")
+        oObjCc["data_alteracao"]    := iif(!empty(cDtAlt), DTOC(STOD(cDtAlt)), "")
+
+        AAdd(aCc,oObjCc)
+        
+        QRYCTT->(DbSkip())
+
+    Enddo
+
+    QRYCTT->(DbCloseArea())
+RETURN aCc
+
+
+user function FXXT
+
+    rpcSetType(3)
+    rpcSetEnv( "99" , "01" ,,,)
+
+    cSql := "SELECT RA_FILIAL, RA_MAT, RA_NOME, RA_CC, RA_LOGRTP, RA_ENDEREC, RA_BAIRRO, RA_MUNICIP, RA_ESTADO, RA_CEP, RA_TELEFON, RA_CIC, RA_PIS, RA_RG,"+;
+            " RA_SEXO, SRA.R_E_C_N_O_ AS RECNO, SX51.X5_DESCRI AS SITFOLH, RA_ADMISSA, RA_DEMISSA,RA_CODFUNC,RA_SEXO,RA_NATURAL,RA_MUNNASC,RA_NACIONA, "+;
+            " RA_ESTCIVI,RA_MAE, RA_PAI"+;
+            " FROM "+RETSQLNAME("SRA")+" SRA "+;
+            " INNER JOIN "+RETSQLNAME("SX5")+" SX51 ON SX51.X5_TABELA = '31' AND SX51.X5_CHAVE = SRA.RA_SITFOLH AND SX51.D_E_L_E_T_ = ' '"+;
+            " WHERE (CONVERT(VARCHAR(8),DATEADD(DAY,CONVERT(INT,CONCAT(ASCII(SUBSTRING(RA_USERLGI,12,1))-50,ASCII(SUBSTRING(RA_USERLGI,16,1))-50))+IIF(SUBSTRING(RA_USERLGI,8,1)='<',10000,0),'1996-01-01'),112) BETWEEN '"+DTOS(CTOD('01/01/2024'))+"' AND '"+DTOS(CTOD('31/12/2025'))+"' OR CONVERT(VARCHAR(8),DATEADD(DAY,CONVERT(INT,CONCAT(ASCII(SUBSTRING(RA_USERLGA,12,1))-50,ASCII(SUBSTRING(RA_USERLGA,16,1))-50))+IIF(SUBSTRING(RA_USERLGA,8,1)='<',10000,0),'1996-01-01'),112)BETWEEN '"+DTOS(CTOD('01/01/2024'))+"' AND '"+DTOS(CTOD('31/12/2025'))+"')"+;
+            " AND SRA.D_E_L_E_T_ = ' '" 
+    
+    //SA1->(FWLEUSERLG(“A1_USERLGI”, 1))+space(1)+SA1->(FWLEUSERLG(“A1_USERLGI”, 2))
+
+    TcQuery cSql New Alias "QRYSRA"
+
+    
+    While !QRYSRA->(Eof())
+
+        cDtInc := FWLEUSERLG('RA_USERLGI', 2)
+        cDtAlt := FWLEUSERLG('RA_USERLGA', 2)  
+
+
+
+    QRYSRA->(DbSkip())
+    Enddo
+
+    RpcClearEnv()
+
+return

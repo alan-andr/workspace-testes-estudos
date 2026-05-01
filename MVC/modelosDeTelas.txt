@@ -1,0 +1,6 @@
+https://terminaldeinformacao.com/2021/04/14/quais-sao-os-modelos-de-cadastro-em-advpl/
+
+Modelo 1 = 1 só tabela (como cadastro de vendedores – SA3)
+Modelo 2 = 1 só tabela separada em cabeçalho e grid (como pedido de compras, onde as chaves se repetem para todos os itens – C7_FILIAL + C7_NUM)
+Modelo 3 = 2 tabelas, separadas com cabeçalho e com grid (como pedido de venda, SC5 e SC6)
+Modelo x = 3 ou mais tabelas (como Documento de Entrada – SF1, SD1, SE2, etc, ou cadastro de produtos com MV_CADPROD preenchido – SB1, SB5, SA5, etc)

@@ -8,12 +8,12 @@ User Function EXEC001()
 
     RpcSetEnv('99', '01')
 
-    Local cCodProd  := Space( TamSX3( 'B1_COD' )[1] )
-    Local cDescProd := Space( TamSX3( 'B1_DESC' )[1] )
-    Local cTipoProd := Space( TamSX3( 'B1_TIPO' )[1] )
-    Local cUniProd  := Space( TamSX3( 'B1_UM' )[1] )
-    Local cArmProd  := Space( TamSX3( 'B1_LOCPAD' )[1] )
-    Local cGrpProd  := Space( TamSX3( 'B1_GRUPO' )[1] )
+    Local cCodProd      := Space( TamSX3( 'B1_COD' )[1] )
+    Local cDescProd     := Space( TamSX3( 'B1_DESC' )[1] )
+    Local cTipoProd     := Space( TamSX3( 'B1_TIPO' )[1] )
+    Local cUniProd      := Space( TamSX3( 'B1_UM' )[1] )
+    Local cArmProd      := Space( TamSX3( 'B1_LOCPAD' )[1] )
+    Local cGrpProd      := Space( TamSX3( 'B1_GRUPO' )[1] )
     Private lMsErroAuto := .F.
 
     aAdd(aPergs, {1, 'Produto'  , cCodProd , '', '.T.', ''   , '.T.', 070, .T.})

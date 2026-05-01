@@ -6,10 +6,10 @@ Namespace Transportadoras
 
 @Get(endpoint='Transportadoras/get/unico', description='Retorna os dados da transportadora de acordo com o código pesquisa')
 User Function GetTransport()
-    Local aArea := FWGetArea() As Array
-    Local jResponse := jsonObject():New() As Json
-    Local jPath As Json
-    Local cAlias := 'SA4' As Character
+    Local aArea     := FWGetArea()        as Array
+    Local jResponse := jsonObject():New() as Json
+    Local jPath     := JSON               as Json
+    Local cAlias    := 'SA4'              as Character
 
     prepAmbiente.u_PrepEnv()
 
@@ -55,11 +55,11 @@ User Function PostTransport()
     Local cBody          := oRest:GetBodyRequest() as Character
     Local cAlias         := 'SA4'                  as Character
     Local aDados         := {}                     as Array
-    Local cDir           := ''
-    Local cErrorLog := ''
-    Local aLogAuto  := {}
-    Local cLinha := '' As
-    Local nLinha := 0 As Numeric
+    Local cDir           := ''                     as Character
+    Local cErrorLog      := ''                     as Character
+    Local aLogAuto       := {}                     as Array
+    Local cLinha         := ''                     as Character
+    Local nLinha         := 0                      as Numeric
     Private lMsErroAuto  := .F.                    as Logical
     Private lMsHelpAuto  := .T.                    as Logical
     Private lMsErrNoFile := .T.                    as Logical

@@ -4,7 +4,7 @@
 User Function JOB001()
     Local aArea := FWGetArea()
     Local lWait := .F.
-    StartJob("U_MeuJob", GetEnvServer(),lWait, cEmpAnt, cFilAnt)
+    StartJob("U_MeuJob", GetEnvServer(), lWait, cEmpAnt, cFilAnt)
 
     FWRestArea(aArea)
 Return

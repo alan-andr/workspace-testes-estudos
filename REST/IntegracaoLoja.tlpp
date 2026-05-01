@@ -1,0 +1,626 @@
+#include "totvs.ch"
+#Include "rwmake.ch"
+#include "protheus.ch"
+#INCLUDE "topconn.ch"
+#include "tbicode.ch"
+#include "tbiconn.ch"
+#include "tlpp-core.th"
+#include "tlpp-rest.th"
+
+Class IntegracaoLoja
+  Public Method New()
+
+  @Post(endpoint="integracaoLoja/cadastroCliente", description="Cadastro de Clientes (SA1)")
+  Public Method PostCliente()
+
+  @Post(endpoint="integracaoLoja/cadastroVendedor", description="Cadastro de Vendedores (SA3)")
+  Public Method PostVendedor()
+
+  @Post(endpoint="integracaoLoja/cadastroBanco", description="Cadastro de Bancos (SA6)")
+  Public Method PostBanco()
+
+  @Post(endpoint="integracaoLoja/cadastroProduto", description="Cadastro de Produtos (SB1)")
+  Public Method PostProduto()
+
+  @Get(endpoint="integracaoLoja/consultaProduto", description="Consulta de Produtos (SB1)")
+  Public Method GetProduto()
+EndClass
+
+Method New() Class IntegracaoLoja
+Return
+
+Static Function fAjustaInfo(cCampo, cValor, lAllTrim, lDecode, lPadR)
+  Local cValAjustado := cValor
+
+  If lAllTrim
+    cValAjustado := allTrim(cValAjustado)
+  EndIf
+
+  If lDecode
+    cValAjustado := decodeUTF8(cValAjustado)
+  EndIf
+
+  If lPadR 
+    cValAjustado := padR(cValAjustado, tamSX3(cCampo)[1])
+  EndIf
+
+Return {cCampo, cValAjustado} 
+
+Method PostCliente() Class IntegracaoLoja
+  Local aArea      := fwGetArea()
+  Local aErrorLog  := {}
+  Local aMap       := {}
+  Local jBody      := jsonObject():New()
+  Local jResponse  := jsonObject():New()
+  Local nItem      := 0
+  Local nQtdCampos := 0
+  Local oSA1Mod    := Nil
+  Local oModel     := Nil
+  Local lContinua  := .T.
+  Local cBody      := oRest:getBodyRequest()
+  Local cMsgInfo   := ""
+  Local cLoja      := ""
+  Local cCGC       := ""
+  Local cNome      := ""
+  Local cEndereco  := ""
+  Local cNomeReduz := ""
+  Local cTipo      := ""
+  Local cEstado    := ""
+  Local cMunicipio := ""
+
+  RpcSetEnv("99", "01")
+
+  oModel := fwLoadModel("CRMA980")
+  oModel:setOperation(3)
+  oModel:activate()
+
+  If empty(cBody)
+    oRest:setStatusCode(400)
+    jResponse["type"] := "failed"
+    jResponse["code"] := 400
+    jResponse["message"] := "Parametros não enviados no body da requisição"
+  Else
+    jBody:fromJson(cBody)
+
+    If jBody != Nil
+      aadd(aMap, {"A1_LOJA"  , jBody["a1_loja"]  , .T., .F., .F.})
+      aadd(aMap, {"A1_NOME"  , jBody["a1_nome"]  , .T., .T., .F.})
+      aadd(aMap, {"A1_NREDUZ", jBody["a1_nreduz"], .T., .T., .F.})
+      aadd(aMap, {"A1_CGC"   , jBody["a1_cgc"]   , .T., .T., .F.})
+      aadd(aMap, {"A1_TIPO"  , jBody["a1_tipo"]  , .T., .T., .F.})
+      aadd(aMap, {"A1_END"   , jBody["a1_end"]   , .T., .T., .F.})
+      aadd(aMap, {"A1_BAIRRO", jBody["a1_bairro"], .T., .T., .F.})
+      aadd(aMap, {"A1_EST"   , jBody["a1_est"]   , .T., .T., .F.})
+      aadd(aMap, {"A1_MUN"   , jBody["a1_mun"]   , .T., .T., .F.})
+
+      If !empty(jBody["a1_loja"])
+        cLoja := allTrim(jBody["a1_loja"])
+        nQtdCampos++
+      EndIf
+
+      If !empty(jBody["a1_nome"])
+        cNome := decodeUTF8(allTrim(jBody["a1_nome"]))
+        nQtdCampos++
+      EndIf
+
+      If !empty(jBody["a1_end"])
+        cEndereco := decodeUTF8(allTrim(jBody["a1_end"]))
+        nQtdCampos++
+      EndIf
+
+      If !empty(jBody["a1_cgc"])
+        cCGC := NoAcento(allTrim(jBody["a1_cgc"]))
+      EndIf
+
+      If !empty(jBody["a1_nreduz"])
+        cNomeReduz := decodeUTF8(allTrim(jBody["a1_nreduz"]))
+        nQtdCampos++
+      EndIf
+
+      If !empty(jBody["a1_est"])
+        cEstado := decodeUTF8(allTrim(jBody["a1_est"]))
+        nQtdCampos++
+      EndIf
+
+      If !empty(jBody["a1_mun"])
+        cMunicipio := decodeUTF8(allTrim(jBody["a1_mun"]))
+        nQtdCampos++
+      EndIf
+
+      If !empty(jBody["a1_tipo"])
+        cTipo := decodeUTF8(allTrim(jBody["a1_tipo"]))
+        nQtdCampos++
+      EndIf
+
+      If nQtdCampos < 8
+        oRest:setStatusCode(400)
+        jResponse["type"] := "failed"
+        jResponse["code"] := "400"
+        jResponse["message"] := "Somente " + cValToChar(nQtdCampos) + " campos obrigatórios foram preenchidos!"
+        ConOut(">>>>> Alguns campos obrigatorios nao foram preenchidos. <<<<<")
+        lContinua := .T.
+      EndIf
+
+      SA1->(DbSetOrder(3)) // A1_FILIAL + A1_CGC
+      If SA1->(DbSeek(xFilial("SA1") + cCGC)) 
+        oRest:setStatusCode(409)
+        jResponse["type"]    := "failed"
+        jResponse["code"]    := "409"
+        jResponse["message"] := "O cliente já está cadastrado no sistema, cliente: " + allTrim(SA1->A1_NREDUZ)
+      Else
+        oSA1Mod := oModel:GetModel("SA1MASTER")
+        oSA1Mod:setValue("A1_FILIAL", xFilial("SA1"))       
+        oSA1Mod:setValue("A1_COD"   , getSXENum("SA1", "A1_COD"))              
+        oSA1Mod:setValue("A1_LOJA"  , cLoja)
+        oSA1Mod:setValue("A1_NOME"  , cNome)            
+        oSA1Mod:setValue("A1_NREDUZ", cNomeReduz)           
+        oSA1Mod:setValue("A1_CGC"   , jBody["a1_cgc"])
+        oSA1Mod:setValue("A1_TIPO"  , cTipo)
+        oSA1Mod:setValue("A1_END"   , cEndereco)             
+        oSA1Mod:setValue("A1_BAIRRO", decodeUTF8(jBody["a1_bairro"]))
+        oSA1Mod:setValue("A1_EST"   , cEstado)
+        oSA1Mod:setValue("A1_MUN"   , cMunicipio)             
+
+        ConOut(Repl("-", 80))
+        ConOut("Inicio: " + Time())
+    
+        If oModel:vldData() .AND. oModel:commitData()
+          confirmSX8()
+          oRest:setStatusCode(201)
+          jResponse["type"]    := "success"
+          jResponse["code"]    := "201"
+          jResponse["message"] := "O cliente " + cNomeReduz + " foi cadastrado com sucesso!"
+          ConOut("O cadastro foi efetivado")
+        Else 
+          aErroLog := oModel:getErrorMessage()
+          disarmTransaction()
+          rollBackSX8()
+            
+          For nItem := 1 To Len(aErrorLog)
+            cMsgInfo += aErrorLog[nItem] + " "
+          Next nItem
+
+          If empty(cMsgInfo)
+            cMsgInfo := "Houve um erro ao cadastrar o cliente."
+          EndIf
+
+          oRest:setStatusCode(422)
+          jResponse["type"]    := "failed"
+          jResponse["code"]    := "422"
+          jResponse["message"] := cMsgInfo
+          ConOut("Ocorreu um erro durante o cadastro do cliente")
+        EndIf
+
+        oModel:deActivate()
+        conOut("Fim: " + time())
+        conOut(repl("-", 80))
+      EndIf
+    Else  
+      oRest:setStatusCode(400)
+      jResponse["type"]    := "failed"
+      jResponse["code"]    := "400"
+      jResponse["message"] := "A requisição contém dados que estão vazios ou nulos"
+    EndIf
+  EndIf
+
+  oRest:setKeyHeaderResponse('Content-Type', 'application/json')
+  oRest:SetResponse(jResponse:toJson())
+  rpcClearEnv()
+  fwRestArea(aArea)
+Return 
+
+Method PostVendedor() Class IntegracaoLoja
+  Local aArea            := FWGetArea()
+  Local aSA3Auto         := {}
+  Local aErrorLog        := {}
+  Local cBody            := oRest:GetBodyRequest()
+  Local oBodyReq         := jsonObject():New()
+  Local oResult          := jsonObject():New()
+  Local nOpcAuto         := 3
+  Local nQtdCampos       := 0
+  Local nX               := 0
+  Local lRet             := .T.
+  Local cMsgInfo         := ""
+
+  Local cCodVende        := ""
+  Local cNomeVende       := ""
+  
+  Private lMsErroAuto    := .F.
+  Private lMsHelpAuto    := .T.
+  Private lAutoErrNoFile := .T.
+
+  RpcSetEnv("99", "01")
+
+  If Empty(cBody)
+    cMsgInfo := "Parametros não enviados no body da requisição"
+    SetRestFault(400,EncodeUtf8(cMsgInfo))
+    lRet := .F.
+  Else
+    oBodyReq:fromJson(cBody)
+
+      If oBodyReq != Nil
+
+        If ! Empty(oBodyReq["a3_cod"])
+          cCodVende := PadR(AllTrim(oBodyReq["a3_cod"]), TamSX3("A3_COD")[1])
+          nQtdCampos++
+        EndIf
+
+        If ! Empty(oBodyReq["a3_nome"])
+          cNomeVende := AllTrim(oBodyReq["a3_nome"])
+          nQtdCampos++
+        EndIf
+
+        If nQtdCampos < 2
+          cMsgInfo := "Somente " + cValToChar(nQtdCampos) + " campos obrigatórios foram preenchidos!"
+          SetRestFault(400, EncodeUtf8(cMsgInfo))
+          ConOut(">>>>> Alguns campos obrigatorios nao foram preenchidos. <<<<<")
+          lRet := .F.
+        EndIf
+
+        DbSelectArea("SA3")
+        SA3->(DbSetOrder(1)) // A3_FILIAL + A3_COD
+
+        If SA3->(DbSeek(xFilial("SA3") + CCodVende))
+          cMsgInfo := "O vendedor já está cadastrado no sistema, Vendedor: " + AllTrim(SA3->A3_NOME) 
+          SetRestFault(400, EncodeUtf8(cMsgInfo))
+        Else
+          aadd(aSA3Auto, {"A3_FILIAL", xFilial("SA3")       , Nil})
+          aadd(aSA3Auto, {"A3_COD"   , cCodVende            , Nil})
+          aadd(aSA3Auto, {"A3_NOME"  , cNomeVende           , Nil})
+          aadd(aSA3Auto, {"A3_NREDUZ", oBodyReq["a3_nreduz"], Nil})
+          aadd(aSA3Auto, {"A3_CGC"   , oBodyReq["a3_cgc"]   , Nil})
+          aadd(aSA3Auto, {"A3_END"   , oBodyReq["a3_end"]   , Nil})
+          aadd(aSA3Auto, {"A3_BAIRRO", oBodyReq["a3_bairro"], Nil})
+          aadd(aSA3Auto, {"A3_EST"   , oBodyReq["a3_est"]   , Nil})
+          aadd(aSA3Auto, {"A3_CEP"   , oBodyReq["a3_cep"]   , Nil})
+
+          BEGIN TRANSACTION
+
+          ConOut(Repl("-", 80))
+          ConOut("Inicio: " + Time())
+
+          MsExecAuto({|x, y| MATA040(x, y)}, aSA3Auto, nOpcAuto)
+
+          If lMsErroAuto
+            // RollBackSX8()
+            DisarmTransaction()
+            aErrorLog := GetAutoGrLog()
+            cMsgInfo := ""
+
+            For nX := 1 To Len(aErrorLog)
+              cMsgInfo += aErrorLog[nX] + " "
+            Next nX
+
+            If Empty(cMsgInfo)
+              cMsgInfo := "Houve um erro ao cadastrar o cliente."
+            EndIf
+
+            SetRestFault(500, EncodeUtf8(cMsgInfo))
+            ConOut("Ocorreu um erro durante o cadastro do vendedor")
+            lRet := .F.
+          Else
+            // ConfirmSX8()
+            oResult["type"]    := "success"
+            oResult["code"]    := "200"
+            oResult["message"] := "O vendedor foi cadastrado com sucesso!"
+            oRest:setResponse(oResult:toJson())
+            ConOut("O cadastro foi efetivado")
+          EndIf
+
+          END TRANSACTION
+
+          ConOut("Fim: " + Time())
+          ConOut(Repl("-", 80))
+        EndIf
+      Else 
+        cMsgInfo := "A requisição contém dados que estão vazios ou nulos"
+        oRest:SetRestFault(400, EncodeUtf8(cMsgInfo))
+    EndIf
+  EndIf
+
+  
+
+  RpcClearEnv()
+  FWRestArea(aArea)
+Return lRet
+
+Method PostBanco() Class IntegracaoLoja 
+  Local aArea            := FWGetArea()
+  Local aSA6Auto         := {}
+  Local aErrorLog        := {}
+  Local cBody            := oRest:GetBodyRequest()
+  Local oBodyReq         := jsonObject():New()
+  Local oResult          := jsonObject():New()
+  Local nOpcAuto         := 3
+  Local nQtdCampos       := 0
+  Local nX               := 0
+  Local cCodAgente       := ""
+  Local cAgencia         := ""
+  Local cNumConta        := ""
+  Local cNomeConta       := ""
+  Local cTcb             := ""
+  Local cMsgInfo         := ""
+  Local lRet             := .T.
+  Private lMsErroAuto    := .F.
+  Private lMsHelpAuto    := .T.
+  Private lAutoErrNoFile := .T.
+
+  RpcSetEnv("99", "01")
+
+  If Empty(cBody)
+    cMsgInfo := "Parametros não enviados no body da requisição"
+    SetRestFault(400, EncodeUtf8(cMsgInfo))
+    lRet := .F.
+  Else
+    oBodyReq:fromJson(cBody)
+
+    If oBodyReq != Nil
+
+      If ! Empty(oBodyReq["a6_cod"])
+        cCodAgente := PadR( AllTrim(cValToChar(oBodyReq["a6_cod"])), TamSX3("A6_COD")[1] )
+        nQtdCampos++
+      EndIf
+
+      If ! Empty(oBodyReq["a6_agencia"])
+        cAgencia := PadR( AllTrim(cValToChar(oBodyReq["a6_agencia"])), TamSX3("A6_AGENCIA")[1] )
+        nQtdCampos++
+      EndIf
+
+      If ! Empty(oBodyReq["a6_numcon"])
+        cNumConta  := PadR( AllTrim(cValToChar(oBodyReq["a6_numcon"])), TamSX3("A6_NUMCON")[1] )
+        nQtdCampos++
+      EndIf
+
+      If ! Empty(oBodyReq["a6_nome"])
+        cNomeConta := AllTrim(cValToChar(oBodyReq["a6_nome"]))
+        nQtdCampos++
+      EndIf
+
+      If ! Empty(oBodyReq["a6_tcb"])
+        cTcb := Alltrim(cValToChar(oBodyReq["a6_tcb"]))
+        nQtdCampos++
+      EndIf
+
+      If nQtdCampos < 5
+        cMsgInfo := "Somente " + cValToChar(aCpoObg) + " campos obrigatórios foram preenchidos!"
+        SetRestFault(400, EncodeUtf8(cMsgInfo))
+        ConOut(">>>>> Alguns campos obrigatorios nao foram preenchidos. <<<<<")
+        lRet := .F.
+      EndIf 
+
+      DbSelectArea("SA6")
+      SA6->(DbSetOrder(1)) // * A6_FILIAL + A6_COD + A6_AGENCIA + A6_NUMCON
+
+      If SA6->(DbSeek(xFilial("SA6") + cCodAgente + cAgencia + cNumConta))
+        cMsgInfo := "O banco já está cadastrado no sistema, banco: " + AllTrim(SA6->A6_NREDUZ) 
+        SetRestFault(400, EncodeUtf8(cMsgInfo))
+        lRet := .F.
+      Else
+        aadd(aSA6Auto, {"A6_FILIAL" , xFilial("SA6")       , Nil})
+        aadd(aSA6Auto, {"A6_COD"    , cCodAgente           , Nil})
+        aadd(aSA6Auto, {"A6_AGENCIA", cAgencia             , Nil})
+        aadd(aSA6Auto, {"A6_DVAGE"  , oBodyReq["a6_dvage"] , Nil})
+        aadd(aSA6Auto, {"A6_NUMCON" , cNumConta            , Nil})
+        aadd(aSA6Auto, {"A6_DVCTA"  , oBodyReq["a6_dvcta"] , Nil})
+        aadd(aSA6Auto, {"A6_NOME"   , cNomeConta           , Nil})
+        aadd(aSA6Auto, {"A6_NREDUZ" , oBodyReq["a6_nreduz"], Nil})
+        aadd(aSA6Auto, {"A6_MUN"    , oBodyReq["a6_mun"]   , Nil})
+        aadd(aSA6Auto, {"A6_END"    , oBodyReq["a6_end"]   , Nil})
+        aadd(aSA6Auto, {"A6_BAIRRO" , oBodyReq["a6_bairro"], Nil})
+        aadd(aSA6Auto, {"A6_CEP"    , oBodyReq["a6_cep"]   , Nil})
+        aadd(aSA6Auto, {"A6_EST"    , oBodyReq["a6_est"]   , Nil})
+        aadd(aSA6Auto, {"A6_CGC"    , oBodyReq["a6_cgc"]   , Nil})
+        aadd(aSA6Auto, {"A6_TCB"    , cTcb                 , Nil})
+
+        ConOut(Repl("-", 80))
+        ConOut("Inicio: " + Time())
+
+        BEGIN TRANSACTION
+
+        MsExecAuto({|x, y| MATA070(x, y)}, aSA6Auto, nOpcAuto)
+
+        If lMsErroAuto
+          //RollBackSX8()
+          DisarmTransaction()
+          aErrorLog := GetAutoGrLog()
+          cMsgInfo := ""
+
+          For nX := 1 To Len(aErrorLog)
+            cMsgInfo += aErrorLog[nX] + " "
+          Next nX
+
+          If Empty(cMsgInfo)
+            cMsgInfo := "Houve um erro ao cadastrar o banco."
+          EndIf
+
+          SetRestFault(500, EncodeUtf8(cMsgInfo))
+          ConOut("Ocorreu um erro durante o cadastro do banco")
+          lRet := .F.
+        Else 
+          // ConfirmSX8()
+          oResult["type"]    := "success"
+          oResult["code"]    := "200"
+          oResult["message"] := "O banco foi cadastrado com sucesso!"
+          oRest:setResponse(oResult:toJson())
+          ConOut("O cadastro do banco foi efetivado")
+        EndIf
+
+        END TRANSACTION
+
+        ConOut("Fim: " + Time())
+        ConOut(Repl("-", 80))
+      EndIf
+    Else
+      cMsgInfo := "A requisição contém dados que estão vazios ou nulos"
+      SetRestFault(400, EncodeUtf8(cMsgInfo))
+      lRet := .F.
+    EndIf
+  EndIf
+
+  FreeObj(oRest)
+  RpcClearEnv()
+  FWRestArea(aArea)
+Return lRet
+
+Method PostProduto() Class integracaoLoja
+  Local aArea            := FWGetArea()
+  Local aSB1Auto         := {}
+  Local aErrorLog        := {}
+  Local cBody            := oRest:GetBodyRequest()
+  Local oBodyReq         := jsonObject():New()
+  Local oResult          := jsonObject():New()
+  Local nQtdCampos       := 0
+  Local nOpcAuto         := 3
+  Local nX               := 0
+  Local lRet             := .T.
+  Local cMsgInfo         := ""
+  
+  Local cCodProd         := ""
+  Local cDescProd        := ""
+  Local cTipoProd        := ""
+  Local cUmProd          := ""
+  Local cLocPadProd      := ""
+
+  Private lMsErroAuto    := .F.
+  Private lMsHelpAuto    := .T.
+  Private lAutoErrNoFile := .T.
+
+  RpcSetEnv("99", "01")
+
+  If Empty(cBody) 
+    cMsgInfo := "Parametros não enviados no body da requisição"
+    SetRestFault(400, EncodeUtf8(cMsgInfo))
+    lRet := .F.
+  Else 
+    oBodyReq:fromJson(cBody)
+
+    If oBodyReq != Nil
+
+      If ! Empty(oBodyReq["b1_cod"])
+        cCodProd := PadR(AllTrim(oBodyReq["b1_cod"]), TamSX3("B1_COD")[1])
+        nQtdCampos++
+      EndIf
+      If ! Empty(oBodyReq["b1_desc"])
+        cDescProd := AllTrim(oBodyReq["b1_desc"])
+        nQtdCampos++
+      EndIf
+      If ! Empty(oBodyReq["b1_tipo"])
+        cTipoProd := AllTrim(oBodyReq["b1_tipo"])
+        nQtdCampos++
+      EndIf
+      If ! Empty(oBodyReq["b1_um"])
+        cUmProd := Alltrim(oBodyReq["b1_um"])
+        nQtdCampos++
+      EndIf
+      If ! Empty(oBodyReq["b1_locpad"])
+        cLocPadProd := AllTrim(oBodyReq["b1_locpad"])
+        nQtdCampos++
+      EndIf
+
+      If nQtdCampos < 5
+        cMsgInfo := "Somente " + cValToChar(nQtdCampos) + " campos obrigatórios foram preenchidos!"
+        SetRestFault(400, EncodeUtf8(cMsgInfo))
+        ConOut(">>>>> Alguns campos obrigatorios nao foram preenchidos. <<<<<")
+        lRet := .F.
+      EndIf
+
+      DbSelectArea("SB1")
+      SB1->(DbSetOrder(1)) // * B1_FILIAL + B1_COD
+
+      If SB1->(DbSeek(xFilial("SB1") + cCodProd))
+        cMsgInfo := "O produto já está cadastrado no sistema, produto: " + AllTrim(SB1->B1_DESC) 
+        SetRestFault(400, EncodeUtf8(cMsgInfo))
+        lRet := .F.
+      Else
+        aadd(aSB1Auto, {"B1_FILIAL", xFilial("SB1"), Nil})
+        aadd(aSB1Auto, {"B1_COD"   , cCodProd      , Nil})
+        aadd(aSB1Auto, {"B1_DESC"  , cDescProd     , Nil})
+        aadd(aSB1Auto, {"B1_TIPO"  , cTipoProd     , Nil})
+        aadd(aSB1Auto, {"B1_UM"    , cUmProd       , Nil})
+        aadd(aSB1Auto, {"B1_LOCPAD", cLocPadProd   , Nil})
+
+        ConOut(Repl("-", 80))
+        ConOut("Inicio: " + Time())
+
+        BEGIN TRANSACTION
+
+        MsExecAuto({|x, y| MATA010(x, y)}, aSB1Auto, nOpcAuto)
+
+        If lMsErroAuto
+          //RollBackSX8()
+          DisarmTransaction()
+          aErrorLog := GetAutoGrLog()
+          cMsgInfo := ""
+
+          For nX := 1 To Len(aErrorLog)
+            cMsgInfo += aErrorLog[nX] + " "
+          Next nX
+
+          If Empty(cMsgInfo)
+            cMsgInfo := "Houve um erro ao cadastrar o produto."
+          EndIf
+
+          SetRestFault(500, EncodeUtf8(cMsgInfo))
+          ConOut("Ocorreu um erro durante o cadastro do produto")
+          lRet := .F.
+        Else
+          // ConfirmSX8()
+          oResult["type"]    := "success"
+          oResult["code"]    := "200"
+          oResult["message"] := "O produto foi cadastrado com sucesso!"
+          oRest:setResponse(oResult:toJson())
+          ConOut("O cadastro do produto foi efetivado")
+        EndIf
+
+        END TRANSACTION
+
+        ConOut("Fim: " + Time())
+        ConOut(Repl("-", 80))
+      EndIf
+    Else 
+      cMsgInfo := "A requisição contém dados que estão vazios ou nulos"
+      SetRestFault(400, EncodeUtf8(cMsgInfo))
+      lRet := .F.
+    EndIf
+  EndIf
+
+  RpcClearEnv()
+  FWRestArea(aArea)
+Return lRet
+
+Method GetProduto() Class integracaoLoja
+  Local aArea     := FWGetArea()
+  Local cBody     := oRest:GetBodyRequest()
+  Local oBodyReq  := jsonObject():New()
+  Local jResponse := jsonObject():New()
+  Local cCodProd  := ""
+  Local lRet      := .T.
+
+  If Empty(cBody) 
+    SetRestFault(400, EncodeUtf8("O corpo da requisição está vazio."))
+    lRet := .F.
+  Else
+    oBodyReq:fromJson(cBody)
+
+    If oBodyReq != Nil
+      If Empty(oBodyReq["b1_cod"])
+        cCodProd := PadR(AllTrim(oBodyReq["b1_cod"]), TamSX3("B1_COD")[1])
+      EndIf
+
+      BEGINSQL ALIAS "QRYRETPROD"
+        SELECT  
+          SB1.B1_DESC AS DescProd
+          SB1.B1_LOCPAD AS A
+        FROM
+          %Table:SC7% SC7
+        WHERE
+          SB1.%NotDel%
+          SB1.B1_FILIAL = %xFilial:SB1%
+          SB1.B1_COD = %Exp:cCodProd%
+      ENDSQL
+      
+    EndIf
+  EndIf
+
+  FWRestArea(aArea)
+Return lRet 
